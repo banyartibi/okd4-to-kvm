@@ -410,8 +410,12 @@ if [ "$CLEANUP" == "yes" ]; then
         virsh net-update ${VIR_NET} delete ip-dhcp-host --xml "<host mac='$MAC' ip='$IP'/>" --live --config > /dev/null || true ||\
         err "Deleting DHCP reservation failed"; ok
         echo -n "XXXX> Deleting VM $vm: "
-        virsh destroy "$vm" > /dev/null || err "virsh destroy $vm failed";
-        virsh undefine "$vm" --remove-all-storage > /dev/null || err "virsh destroy $vm --remove-all-storage failed";
+        if ! virsh destroy "$vm" > /dev/null 2>&1; then
+            echo "virsh destroy $vm failed, trying undefine..."
+        fi
+        if ! virsh undefine "$vm" --remove-all-storage > /dev/null 2>&1; then
+            err "virsh undefine $vm --remove-all-storage failed"
+        fi
         ok
     done
 
@@ -473,31 +477,38 @@ INSTALLER_URL="${OKD_MIRROR}/${OKD_VERSION}/${INSTALLER}"
 echo "====> ${INSTALLER_URL}"
 echo -n "====> Checking if Installer URL is downloadable: ";  download check "$INSTALLER" "$INSTALLER_URL";
 
-# FCOS KERNEL, INITRAMFS AND IMAGE FILES
+## FCOS KERNEL, INITRAMFS AND IMAGE FILES
+#
+#echo -n "====> Looking up FCOS kernel for release ${FCOS_VERSION}: "
+#KERNEL="fedora-coreos-${FCOS_VERSION}-live-kernel.x86_64"; ok "$KERNEL"
+#KERNEL_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${KERNEL}"
+#echo "====> ${KERNEL_URL}"
+#echo -n "====> Checking if Kernel URL is downloadable: "; download check "$KERNEL" "$KERNEL_URL";
+#
+#echo -n "====> Looking up FCOS initramfs for release ${FCOS_VERSION}: "
+#INITRAMFS="fedora-coreos-${FCOS_VERSION}-live-initramfs.x86_64.img"; ok "$KERNEL"
+#INITRAMFS_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${INITRAMFS}"
+#echo "====> ${INITRAMFS_URL}"
+#echo -n "====> Checking if Initramfs URL is downloadable: "; download check "$INITRAMFS" "$INITRAMFS_URL";
+#
+#echo -n "====> Looking up FCOS image for release $FCOS_VER/$urldir: "
+#IMAGE="fedora-coreos-${FCOS_VERSION}-metal.x86_64.raw.xz"; ok "$IMAGE"
+#IMAGE_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE}"
+#echo "====> ${IMAGE_URL}"
+#echo -n "====> Checking if Image URL is downloadable: "; download check "$IMAGE" "$IMAGE_URL";
+#
+#echo -n "====> Looking up FCOS image signature for release $FCOS_VER/$urldir: "
+#IMAGE_SIG="fedora-coreos-${FCOS_VERSION}-metal.x86_64.raw.xz.sig"; ok "$IMAGE"
+#IMAGE_SIG_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE_SIG}"
+#echo "====> ${IMAGE_URL_SIG}"
+#echo -n "====> Checking if Image signature URL is downloadable: "; download check "$IMAGE_SIG" "$IMAGE_SIG__URL";
 
-echo -n "====> Looking up FCOS kernel for release ${FCOS_VERSION}: "
-KERNEL="fedora-coreos-${FCOS_VERSION}-live-kernel.x86_64"; ok "$KERNEL"
-KERNEL_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${KERNEL}"
-echo "====> ${KERNEL_URL}"
-echo -n "====> Checking if Kernel URL is downloadable: "; download check "$KERNEL" "$KERNEL_URL";
-
-echo -n "====> Looking up FCOS initramfs for release ${FCOS_VERSION}: "
-INITRAMFS="fedora-coreos-${FCOS_VERSION}-live-initramfs.x86_64.img"; ok "$KERNEL"
-INITRAMFS_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${INITRAMFS}"
-echo "====> ${INITRAMFS_URL}"
-echo -n "====> Checking if Initramfs URL is downloadable: "; download check "$INITRAMFS" "$INITRAMFS_URL";
-
-echo -n "====> Looking up FCOS image for release $FCOS_VER/$urldir: "
-IMAGE="fedora-coreos-${FCOS_VERSION}-metal.x86_64.raw.xz"; ok "$IMAGE"
+# FCOS QEMU IMAGE FILE
+echo -n "====> Looking up FCOS QEMU image for release ${FCOS_VERSION}: "
+IMAGE="fedora-coreos-${FCOS_VERSION}-qemu.x86_64.qcow2.xz"; ok "$IMAGE"
 IMAGE_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE}"
 echo "====> ${IMAGE_URL}"
 echo -n "====> Checking if Image URL is downloadable: "; download check "$IMAGE" "$IMAGE_URL";
-
-echo -n "====> Looking up FCOS image signature for release $FCOS_VER/$urldir: "
-IMAGE_SIG="fedora-coreos-${FCOS_VERSION}-metal.x86_64.raw.xz.sig"; ok "$IMAGE"
-IMAGE_SIG_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE_SIG}"
-echo "====> ${IMAGE_URL_SIG}"
-echo -n "====> Checking if Image signature URL is downloadable: "; download check "$IMAGE_SIG" "$IMAGE_SIG__URL";
 
 # AlmaLinux CLOUD IMAGE
 LB_IMG="${LB_IMG_URL##*/}"
@@ -666,24 +677,29 @@ tar -xf "${CACHE_DIR}/${CLIENT}" && rm -f README.md
 tar -xf "${CACHE_DIR}/${INSTALLER}" && rm -f rm -f README.md
 
 echo -n "====> Downloading FCOS Image: "; download get "$IMAGE" "$IMAGE_URL";
-echo -n "====> Downloading FCOS Image signature: "; download get "$IMAGE_SIG" "$IMAGE_SIG_URL";
-echo -n "====> Downloading FCOS Kernel: "; download get "$KERNEL" "$KERNEL_URL";
-echo -n "====> Downloading FCOS Initramfs: "; download get "$INITRAMFS" "$INITRAMFS_URL";
 
-mkdir fcos-install
-cp "${CACHE_DIR}/${KERNEL}" "fcos-install/vmlinuz"
-cp "${CACHE_DIR}/${INITRAMFS}" "fcos-install/initramfs.img"
+if [ ! -f "${CACHE_DIR}/${IMAGE%.xz}" ]; then
+  echo "====> Unpacking QCOW2 image..."
+  unxz -k "${CACHE_DIR}/${IMAGE}"
+fi
+#echo -n "====> Downloading FCOS Image signature: "; download get "$IMAGE_SIG" "$IMAGE_SIG_URL";
+#echo -n "====> Downloading FCOS Kernel: "; download get "$KERNEL" "$KERNEL_URL";
+#echo -n "====> Downloading FCOS Initramfs: "; download get "$INITRAMFS" "$INITRAMFS_URL";
 
-cat <<EOF > fcos-install/.treeinfo
-[general]
-arch = x86_64
-family = Fedora CoreOS
-platforms = x86_64
-version = ${OKD_VER}
-[images-x86_64]
-initrd = initramfs.img
-kernel = vmlinuz
-EOF
+#mkdir fcos-install
+#cp "${CACHE_DIR}/${KERNEL}" "fcos-install/vmlinuz"
+#cp "${CACHE_DIR}/${INITRAMFS}" "fcos-install/initramfs.img"
+#
+#cat <<EOF > fcos-install/.treeinfo
+#[general]
+#arch = x86_64
+#family = Fedora CoreOS
+#platforms = x86_64
+#version = ${OKD_VER}
+#[images-x86_64]
+#initrd = initramfs.img
+#kernel = vmlinuz
+#EOF
 
 mkdir install_dir
 cat <<EOF > install_dir/install-config.yaml
@@ -832,11 +848,11 @@ virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
     --copy-in install_dir/bootstrap.ign:/opt/ \
     --copy-in install_dir/master.ign:/opt/ \
     --copy-in install_dir/worker.ign:/opt/ \
-    --copy-in "${CACHE_DIR}/${IMAGE}":/opt/ \
-    --copy-in "${CACHE_DIR}/${IMAGE_SIG}":/opt/ \
     --copy-in tmpws.service:/etc/systemd/system/ \
     --run-command "systemctl daemon-reload" \
     --run-command "systemctl enable tmpws.service" || \
+    #--copy-in "${CACHE_DIR}/${IMAGE}":/opt/ \
+    #--copy-in "${CACHE_DIR}/${IMAGE_SIG}":/opt/ \
     err "Setting up Loadbalancer VM image failed"
 
 echo -n "====> Creating Loadbalancer VM: "
@@ -935,35 +951,56 @@ echo "#### CREATE BOOTSTRAPING FCOS/OKD NODES ###"
 echo "############################################"
 echo 
 
+echo -n "====> Creating Bootstrap VM: "
+cp "${CACHE_DIR}/${IMAGE%.xz}" "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2"
+qemu-img resize "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2" 100G
 
-echo -n "====> Creating Boostrap VM: "
 virt-install --name ${CLUSTER_NAME}-bootstrap \
-  --disk "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2,size=50" --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
-  --os-variant rhel7-unknown \
-  --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
-  --location fcos-install/ \
-  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/bootstrap.ign" > /dev/null || err "Creating boostrap vm failed"; ok
+  --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
+  --os-variant fedora-coreos-stable \
+  --disk path="${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2",format=qcow2,bus=virtio \
+  --network network=${VIR_NET},model=virtio \
+  --noreboot --noautoconsole --import \
+  --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/install_dir/bootstrap.ign" \
+  > /dev/null || err "Creating bootstrap vm failed"; ok
+
+
+# If the webserver not working we can use fw_cfg or cloudinit CDROM:
+# --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/bootstrap.ign" \
+# --disk path=${SETUP_DIR}/bootstrap.ign,device=cdrom
+# Not working
+# --extra-args "coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/bootstrap.ign" \
 
 for i in $(seq 1 ${N_MAST})
 do
-echo -n "====> Creating Master-${i} VM: "
-virt-install --name ${CLUSTER_NAME}-master-${i} \
-  --disk "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2,size=50" --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
-  --os-variant rhel7-unknown \
-  --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
-  --location fcos-install/ \
-  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/master.ign" > /dev/null || err "Creating master-${i} vm failed "; ok
+  echo -n "====> Creating Master-${i} VM: "
+  cp "${CACHE_DIR}/${IMAGE%.xz}" "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2"
+  qemu-img resize "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2" 100G
+
+  virt-install --name ${CLUSTER_NAME}-master-${i} \
+    --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
+    --os-variant fedora-coreos-stable \
+    --disk path="${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2",format=qcow2,bus=virtio \
+    --network network=${VIR_NET},model=virtio \
+    --noreboot --noautoconsole --import \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/install_dir/master.ign" \
+    > /dev/null || err "Creating master-${i} vm failed "; ok
 done
 
 for i in $(seq 1 ${N_WORK})
 do
-echo -n "====> Creating Worker-${i} VM: "
+  echo -n "====> Creating Worker-${i} VM: "
+  cp "${CACHE_DIR}/${IMAGE%.xz}" "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2"
+  qemu-img resize "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2" 100G
+
   virt-install --name ${CLUSTER_NAME}-worker-${i} \
-  --disk "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2,size=50" --ram ${WOR_MEM} --cpu host --vcpus ${WOR_CPU} \
-  --os-type linux --os-variant rhel7-unknown \
-  --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
-  --location fcos-install/ \
-  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/worker.ign" > /dev/null || err "Creating worker-${i} vm failed "; ok
+    --ram ${WOR_MEM} --cpu host --vcpus ${WOR_CPU} \
+    --os-variant fedora-coreos-stable \
+    --disk path="${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2",format=qcow2,bus=virtio \
+    --network network=${VIR_NET},model=virtio \
+    --noreboot --noautoconsole --import \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/install_dir/worker.ign" \
+    > /dev/null || err "Creating worker-${i} vm failed "; ok
 done
 
 echo "====> Waiting for FCOS Installation to finish: "
