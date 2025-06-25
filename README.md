@@ -20,7 +20,7 @@ We have modified shell script to work with OKD.
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /root/pull-secret |
 | -c, --cluster-name NAME | OKD 4 cluster name<br>Default: okd4 |
 | -d, --cluster-domain DOMAIN | OKD 4 cluster domain<br>Default: local |
-| -t, --network-type TYPE | OpenShift 4 cluster network type<br>Default: OpenShiftSDN |
+| -t, --network-type TYPE | OpenShift 4 cluster network type<br>Default: OVNKubernetes |
 | -m, --masters N | Number of masters to deploy<br>Default: 3 |
 | -w, --worker N | Number of workers to deploy<br>Default: 2 |
 | --master-cpu N | Number of CPUs for the master VM(s)<br>Default: 8 |
@@ -65,9 +65,9 @@ We have modified shell script to work with OKD.
     ./okd4_setup_kvm.sh --okd-version 4.5.0-0.okd-2020-08-12-020541 --libvirt-oct 155
     ./okd4_setup_kvm.sh -O 4.5.0-0.okd-2020-08-12-020541 -N 155
 
-    # Deploy OKD 4.5.0-0.okd-2020-08-12-020541 with OVNKubernetes network type
-    ./okd4_setup_kvm.sh --okd-version 4.5.0-0.okd-2020-08-12-020541 --network-type OVNKubernetes
-    ./okd4_setup_kvm.sh -O 4.5.0-0.okd-2020-08-12-020541 -t OVNKubernetes
+    # Deploy OKD 4.5.0-0.okd-2020-08-12-020541 with OpenShiftSDN network type
+    ./okd4_setup_kvm.sh --okd-version 4.5.0-0.okd-2020-08-12-020541 --network-type OpenShiftSDN
+    ./okd4_setup_kvm.sh -O 4.5.0-0.okd-2020-08-12-020541 -t OpenShiftSDN
 
     # Destory the already installed cluster
     ./okd4_setup_kvm.sh --cluster-name okd45 --cluster-domain lab.test.com --destroy
