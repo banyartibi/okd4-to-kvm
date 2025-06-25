@@ -24,13 +24,13 @@ We have modified shell script to work with OKD.
 | -m, --masters N | Number of masters to deploy<br>Default: 3 |
 | -w, --worker N | Number of workers to deploy<br>Default: 2 |
 | --master-cpu N | Number of CPUs for the master VM(s)<br>Default: 8 |
-| --master-mem SIZE(MB) | RAM size (MB) of master VM(s)<br>Default: 16000 |
+| --master-mem SIZE(MB) | RAM size (MB) of master VM(s)<br>Default: 16384 |
 | --worker-cpu N | Number of CPUs for the worker VM(s)<br>Default: 4 |
-| --worker-mem SIZE(MB) | RAM size (MB) of worker VM(s)<br>Default: 8000 |
+| --worker-mem SIZE(MB) | RAM size (MB) of worker VM(s)<br>Default: 8192 |
 | --bootstrap-cpu N | Number of CPUs for the bootstrap VM<br>Default: 8 |
-| --bootstrap-mem SIZE(MB) | RAM size (MB) of bootstrap VM<br>Default: 16000 |
-| --lb-cpu N | Number of CPUs for the load balancer VM<br>Default: 4 |
-| --lb-mem SIZE(MB) | RAM size (MB) of load balancer VM<br>Default: 4000 |
+| --bootstrap-mem SIZE(MB) | RAM size (MB) of bootstrap VM<br>Default: 16384 |
+| --lb-cpu N | Number of CPUs for the load balancer VM<br>Default: 2 |
+| --lb-mem SIZE(MB) | RAM size (MB) of load balancer VM<br>Default: 3072 |
 | -n, --libvirt-network NETWORK | The libvirt network to use. Select this option if you want to use an existing libvirt network<br>The libvirt network should already exist. If you want the script to create a separate network for this installation see: -N, --libvirt-oct<br>Default: default |
 | -N, --libvirt-oct OCTET | You can specify a 192.168.{OCTET}.0 subnet octet and this script will create a new libvirt network for the cluster<br>The network will be named okd-{OCTET}. If the libvirt network okd-{OCTET} already exists, it will be used.<br>Default: [not set] |
 | -v, --vm-dir | The location where you want to store the VM Disks<br>Default: /var/lib/libvirt/images |

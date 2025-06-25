@@ -206,25 +206,25 @@ cat << EOF | column -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 |Default: 8
 
 --master-mem SIZE(MB)|Master VMs Memory (in MB)
-|Default: 16000
+|Default: 16384
 
 --worker-cpu N|Worker VMs CPUs
 |Default: 4
 
 --worker-mem SIZE(MB)|Worker VMs Memory (in MB)
-|Default: 8000
+|Default: 8192
 
 --bootstrap-cpu N|Bootstrap VM CPUs
 |Default: 8
 
 --bootstrap-mem SIZE(MB)|Bootstrap VM Memory (in MB)
-|Default: 16000
+|Default: 16384
 
 --lb-cpu N|Loadbalancer VM CPUs
-|Default: 4
+|Default: 2
 
 --bootstrap-mem SIZE(MB)|Loadbalancer VM Memory (in MB)
-|Default: 4000
+|Default: 3072
 
 -n, --libvirt-network NETWORK|The libvirt network to use. Select this option if you want to use an existing libvirt network.
 |The libvirt network should already exist. If you want the script to create a separate network for this installation see: -N, --libvirt-oct
@@ -297,13 +297,13 @@ test -z "$FCOS_VERSION" && FCOS_VERSION="42.20250609.3.0"
 test -z "$N_MAST" && N_MAST="2"
 test -z "$N_WORK" && N_WORK="3"
 test -z "$MAS_CPU" && MAS_CPU="8"
-test -z "$MAS_MEM" && MAS_MEM="16000"
+test -z "$MAS_MEM" && MAS_MEM="16384"
 test -z "$WOR_CPU" && WOR_CPU="4"
-test -z "$WOR_MEM" && WOR_MEM="8000"
+test -z "$WOR_MEM" && WOR_MEM="8192"
 test -z "$BTS_CPU" && BTS_CPU="8"
-test -z "$BTS_MEM" && BTS_MEM="16000"
-test -z "$LB_CPU" && LB_CPU="4"
-test -z "$LB_MEM" && LB_MEM="4000"
+test -z "$BTS_MEM" && BTS_MEM="16384"
+test -z "$LB_CPU" && LB_CPU="2"
+test -z "$LB_MEM" && LB_MEM="3072"
 test -z "$VIR_NET" -a -z "$VIR_NET_OCT" && VIR_NET="default"
 test -n "$VIR_NET" -a -n "$VIR_NET_OCT" && err "Specify either -n or -N" 
 test -z "$CLUSTER_NAME" && CLUSTER_NAME="okd4"
