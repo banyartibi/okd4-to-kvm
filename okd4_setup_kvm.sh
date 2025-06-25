@@ -724,7 +724,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/opt
-ExecStart=/usr/bin/python -m SimpleHTTPServer ${WS_PORT}
+ExecStart=/usr/bin/python3 -m SimpleHTTPServer ${WS_PORT}
 [Install]
 WantedBy=default.target
 EOF
@@ -841,7 +841,7 @@ virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
 
 echo -n "====> Creating Loadbalancer VM: "
 virt-install --import --name ${CLUSTER_NAME}-lb --disk "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
-    --memory ${LB_MEM} --cpu host --vcpus ${LB_CPU} --os-type linux --os-variant almalinux9 \
+    --memory ${LB_MEM} --cpu host --vcpus ${LB_CPU} --os-variant almalinux9 \
     --network network=${VIR_NET},model=virtio --noreboot --noautoconsole > /dev/null || \
     err "Creating Loadbalancer VM failed"; ok
 
@@ -939,7 +939,7 @@ echo
 echo -n "====> Creating Boostrap VM: "
 virt-install --name ${CLUSTER_NAME}-bootstrap \
   --disk "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2,size=50" --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
-  --os-type linux --os-variant rhel7-unknown \
+  --os-variant rhel7-unknown \
   --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
   --location fcos-install/ \
   --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/bootstrap.ign" > /dev/null || err "Creating boostrap vm failed"; ok
@@ -948,11 +948,11 @@ for i in $(seq 1 ${N_MAST})
 do
 echo -n "====> Creating Master-${i} VM: "
 virt-install --name ${CLUSTER_NAME}-master-${i} \
---disk "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2,size=50" --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
---os-type linux --os-variant rhel7-unknown \
---network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
---location fcos-install/ \
---extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/master.ign" > /dev/null || err "Creating master-${i} vm failed "; ok
+  --disk "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2,size=50" --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
+  --os-variant rhel7-unknown \
+  --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
+  --location fcos-install/ \
+  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/master.ign" > /dev/null || err "Creating master-${i} vm failed "; ok
 done
 
 for i in $(seq 1 ${N_WORK})
