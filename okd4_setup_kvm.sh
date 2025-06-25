@@ -401,6 +401,9 @@ if [ "$CLEANUP" == "yes" ]; then
     if [ -f /tmp/bootstrap.iso ]; then rm -rf /tmp/bootstrap.iso; fi
     if [ -f /tmp/master.iso ]; then rm -rf /tmp/master.iso; fi
     if [ -f /tmp/worker.iso ]; then rm -rf /tmp/worker.iso; fi
+    if [ -d /tmp/bootstrap_ign ]; then rm -rf /tmp/bootstrap_ign; fi
+    if [ -d /tmp/master_ign ]; then rm -rf /tmp/master_ign; fi
+    if [ -d /tmp/worker_ign ]; then rm -rf /tmp/worker_ign; fi
 
     if [ -n "$VIR_NET_OCT" -a -z "$VIR_NET" ]; then
         VIR_NET="okd-${VIR_NET_OCT}"
@@ -960,6 +963,9 @@ echo
 if [ -f /tmp/bootstrap.iso ]; then
     rm -f /tmp/bootstrap.iso
 fi
+if [ -d /tmp/bootstrap_ign ]; then
+    rm -rf /tmp/bootstrap_ign
+fi
 mkdir /tmp/bootstrap_ign
 cp ${SETUP_DIR}/install_dir/bootstrap.ign /tmp/bootstrap_ign/config.ign
 genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/bootstrap_ign/config.ign
@@ -968,6 +974,9 @@ chmod 644 /tmp/bootstrap.iso
 # Master ignition ISO (ha minden masterhez külön .ign kell, akkor ciklussal)
 if [ -f /tmp/master.iso ]; then
     rm -f /tmp/master.iso
+fi
+if [ -d /tmp/master_ign ]; then
+    rm -rf /tmp/master_ign
 fi
 mkdir /tmp/master_ign
 cp ${SETUP_DIR}/install_dir/master.ign /tmp/master_ign/config.ign
@@ -978,10 +987,13 @@ chmod 644 /tmp/master.iso
 if [ -f /tmp/worker.iso ]; then
     rm -f /tmp/worker.iso
 fi
+if [ -d /tmp/worker_ign ]; then
+    rm -rf /tmp/worker_ign
+fi
 mkdir /tmp/worker_ign
 cp ${SETUP_DIR}/install_dir/worker.ign /tmp/worker_ign/config.ign
-genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/worker_ign/config.ign
-chmod 644 /tmp/bootstrap.iso
+genisoimage -output /tmp/worker.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/worker_ign/config.ign
+chmod 644 /tmp/worker.iso
 echo
 ls -la /tmp/*.iso
 echo
@@ -995,7 +1007,8 @@ virt-install --name ${CLUSTER_NAME}-bootstrap \
   --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
   --os-variant fedora-coreos-stable \
   --disk path="${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2",format=qcow2,bus=virtio \
-  --disk path=/tmp/bootstrap.iso,device=cdrom \
+  --cdrom /tmp/bootstrap.iso \
+  --boot cdrom,hd,menu=on \
   --network network=${VIR_NET},model=virtio \
   --noreboot --noautoconsole --import \
   > /dev/null || err "Creating bootstrap vm failed"; ok
@@ -1017,7 +1030,8 @@ do
     --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2",format=qcow2,bus=virtio \
-    --disk path=/tmp/master.iso,device=cdrom \
+    --cdrom /tmp/master.iso \
+    --boot cdrom,hd,menu=on \
     --network network=${VIR_NET},model=virtio \
     --noreboot --noautoconsole --import \
     > /dev/null || err "Creating master-${i} vm failed "; ok
@@ -1033,7 +1047,8 @@ do
     --ram ${WOR_MEM} --cpu host --vcpus ${WOR_CPU} \
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2",format=qcow2,bus=virtio \
-    --disk path=/tmp/worker.iso,device=cdrom \
+    --cdrom /tmp/worker.iso \
+    --boot cdrom,hd,menu=on \
     --network network=${VIR_NET},model=virtio \
     --noreboot --noautoconsole --import \
     > /dev/null || err "Creating worker-${i} vm failed "; ok
