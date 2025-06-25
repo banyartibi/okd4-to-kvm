@@ -724,7 +724,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/opt
-ExecStart=/usr/bin/python3 -m SimpleHTTPServer ${WS_PORT}
+ExecStart=/usr/bin/python3 -m http.server ${WS_PORT}
 [Install]
 WantedBy=default.target
 EOF
