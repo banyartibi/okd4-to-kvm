@@ -346,24 +346,49 @@ download() {
     fi
 }
 
-echo 
+echo
 echo "##########################################"
 echo "########### CPUs and RAM CHECK ###########"
 echo "##########################################"
 echo
-AVAILABLE_CPUS=$(lscpu | grep '^CPU(s)' | cut -f2 -d':' | tr -d ' '|head -1)
-AVAILABLE_RAM_INKB=$(cat /proc/meminfo  | grep MemTotal | awk '{print $2}')
+
+AVAILABLE_CPUS=$(lscpu | grep '^CPU(s)' | cut -f2 -d':' | tr -d ' ' | head -1)
+AVAILABLE_RAM_INKB=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
 AVAILABLE_RAM=$(( AVAILABLE_RAM_INKB / 1024 ))
 REQUESTED_RAM=$(( N_MAST * MAS_MEM + N_WORK * WOR_MEM + BTS_MEM + LB_MEM ))
-REQUESTED_CPUS=$(( N_MAST * MAS_CPU + N_WORK * WOR_CPU + BTS_CPU + LB_CPU  ))
+REQUESTED_CPUS=$(( N_MAST * MAS_CPU + N_WORK * WOR_CPU + BTS_CPU + LB_CPU ))
 
-echo -n "====> Checking available CPUs :"
-test "${REQUESTED_CPUS}" -le "${AVAILABLE_CPUS}" || err "Requested CPUs: ${REQUESTED_CPUS} \t\t Available CPUs: ${AVAILABLE_CPUS}"
-ok
+# Konvertálás GB-ba (egész számra kerekítve)
+REQUESTED_GB=$(( REQUESTED_RAM / 1024 ))
+AVAILABLE_GB=$(( AVAILABLE_RAM / 1024 ))
+SAFE_RAM_LIMIT=$(( AVAILABLE_RAM * 3 / 2 ))  # 50% overcommitment
+SAFE_RAM_LIMIT_GB=$(( SAFE_RAM_LIMIT / 1024 ))
 
-echo -n "====> Checking available RAM :"
-test "${REQUESTED_RAM}" -le "${AVAILABLE_RAM}" || err "Requested RAM: ${REQUESTED_RAM} \t\t Available RAM: ${AVAILABLE_RAM}"
-ok
+WARNING_LIMIT=$(( AVAILABLE_CPUS * 5 ))
+ERROR_LIMIT=$(( AVAILABLE_CPUS * 10 ))
+
+# CPU ellenőrzés (ugyanaz, mint előzőleg)
+printf "====> Checking available CPUs : "
+if [ "$REQUESTED_CPUS" -ge "$ERROR_LIMIT" ]; then
+    err "Requested CPUs: $REQUESTED_CPUS / $AVAILABLE_CPUS (it's more than 1000% overcommitment!)"
+elif [ "$REQUESTED_CPUS" -ge "$WARNING_LIMIT" ]; then
+    echo "[WARNING] Requested CPUs: $REQUESTED_CPUS / $AVAILABLE_CPUS (fit in the 500% overcommitment)"
+elif [ "$REQUESTED_CPUS" -le "$AVAILABLE_CPUS" ]; then
+    echo "OK (all vCPUs fit in physical CPUs: $REQUESTED_CPUS / $AVAILABLE_CPUS)"
+else
+    echo "OK (overcommitment, but within safe 500% limit: $REQUESTED_CPUS / $AVAILABLE_CPUS)"
+fi
+
+# Új RAM ellenőrzés (GB-ban, 50% overcommitment)
+printf "====> Checking available RAM : "
+if [ "$REQUESTED_RAM" -le "$AVAILABLE_RAM" ]; then
+    echo "OK (requested RAM: ${REQUESTED_GB}GB, available: ${AVAILABLE_GB}GB)"
+elif [ "$REQUESTED_RAM" -le "$SAFE_RAM_LIMIT" ]; then
+    echo "[WARNING] Requested RAM: ${REQUESTED_GB}GB, available: ${AVAILABLE_GB}GB (fits within 50% overcommitment, safe limit: ${SAFE_RAM_LIMIT_GB}GB)"
+else
+    err "Requested RAM: ${REQUESTED_GB}GB exceeds 50% overcommitment safe limit (${SAFE_RAM_LIMIT_GB}GB)"
+fi
+
 
 if [ "$CLEANUP" == "yes" ]; then
 
