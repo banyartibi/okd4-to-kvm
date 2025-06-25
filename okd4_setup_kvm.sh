@@ -398,9 +398,9 @@ if [ "$CLEANUP" == "yes" ]; then
     echo "##################"
     echo 
 
-    if [ -f /var/lib/libvirt/boot/bootstrap.ign ]; then rm -rf /var/lib/libvirt/boot/bootstrap.ign; fi
-    if [ -f /var/lib/libvirt/boot/master.ign ]; then rm -rf /var/lib/libvirt/boot/master.ign; fi
-    if [ -f /var/lib/libvirt/boot/worker.ign ]; then rm -rf /var/lib/libvirt/boot/worker.ign; fi
+    if [ -f /tmp/bootstrap.iso ]; then rm -rf /tmp/bootstrap.iso; fi
+    if [ -f /tmp/master.iso ]; then rm -rf /tmp/master.iso; fi
+    if [ -f /tmp/worker.iso ]; then rm -rf /tmp/worker.iso; fi
 
     if [ -n "$VIR_NET_OCT" -a -z "$VIR_NET" ]; then
         VIR_NET="okd-${VIR_NET_OCT}"
@@ -896,25 +896,24 @@ done
 ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" true || err "SSH to lb.${CLUSTER_NAME}.${BASE_DOM} failed"; ok
 
 # HAPROXY TELEPÍTÉS ÉS KONFIGURÁCIÓ SSH-N KERESZTÜL
-echo "====> Installing haproxy and bind-utils on Loadbalancer VM: "
-ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "dnf install -y haproxy bind-utils" || \
+echo "====> Installing haproxy, policycoreutils-python-utils and bind-utils on Loadbalancer VM: "
+ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "dnf install -y haproxy policycoreutils-python-utils bind-utils" || \
     err "Failed to install haproxy and bind-utils"
 
 echo "====> Copying haproxy.cfg to Loadbalancer VM: "
 scp -i sshkey haproxy.cfg lb.${CLUSTER_NAME}.${BASE_DOM}:/etc/haproxy/haproxy.cfg || \
     err "Failed to copy haproxy.cfg"
 
-echo "====> Setting SELinux to permissive mode permanently: "
-ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "setenforce 0 && sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config" || \
-    err "Failed to set SELinux to permissive"
-
-echo "====> Enabling haproxy service: "
-ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "systemctl enable haproxy" || err "Failed to enable haproxy service"
-
-echo "====> Starting haproxy service: "
-ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "systemctl start haproxy" || err "Failed to start haproxy service"
-
-
+#We will handle this on a later point
+#echo "====> Setting SELinux to permissive mode permanently: "
+#ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "setenforce 0 && sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config" || \
+#    err "Failed to set SELinux to permissive"
+#
+#echo "====> Enabling haproxy service: "
+#ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "systemctl enable haproxy" || err "Failed to enable haproxy service"
+#
+#echo "====> Starting haproxy service: "
+#ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "systemctl start haproxy" || err "Failed to start haproxy service"
 
 echo 
 echo "##################"
@@ -955,11 +954,30 @@ echo "#### CREATE BOOTSTRAPING FCOS/OKD NODES ###"
 echo "############################################"
 echo 
 
-echo  -n "====> Copy ignition files to /var/lib/libvirt/boot/ "
+echo  -n "====> Create bootstrap ignition ISO files /tmp "
 echo
-cp /opt/OKD4_setup_biti-okd/install_dir/*.ign /var/lib/libvirt/boot/
-chmod 644 /var/lib/libvirt/boot/*.ign
-ls -la /var/lib/libvirt/boot/
+# Bootstrap ignition ISO
+if [ -f /tmp/bootstrap.iso ]; then
+    rm -f /tmp/bootstrap.iso
+fi
+genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock ${SETUP_DIR}/install_dir/bootstrap.ign
+chmod 644 /tmp/bootstrap.iso
+
+# Master ignition ISO (ha minden masterhez külön .ign kell, akkor ciklussal)
+if [ -f /tmp/master.iso ]; then
+    rm -f /tmp/master.iso
+fi
+genisoimage -output /tmp/master.iso -volid config-2 -joliet -rock ${SETUP_DIR}/install_dir/master.ign
+chmod 644 /tmp/master.iso
+
+# Worker ignition ISO (ha minden workerhez külön .ign kell, akkor ciklussal)
+if [ -f /tmp/worker.iso ]; then
+    rm -f /tmp/worker.iso
+fi
+genisoimage -output /tmp/worker.iso -volid config-2 -joliet -rock ${SETUP_DIR}/install_dir/worker.ign
+chmod 644 /tmp/worker.iso
+echo
+ls -la /tmp/*.iso
 echo
 echo
 
@@ -971,9 +989,9 @@ virt-install --name ${CLUSTER_NAME}-bootstrap \
   --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
   --os-variant fedora-coreos-stable \
   --disk path="${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2",format=qcow2,bus=virtio \
+  --disk path=/tmp/bootstrap.iso,device=cdrom \
   --network network=${VIR_NET},model=virtio \
   --noreboot --noautoconsole --import \
-  --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/var/lib/libvirt/boot/bootstrap.ign" \
   > /dev/null || err "Creating bootstrap vm failed"; ok
 
 
@@ -993,9 +1011,9 @@ do
     --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2",format=qcow2,bus=virtio \
+    --disk path=/tmp/master.iso,device=cdrom \
     --network network=${VIR_NET},model=virtio \
     --noreboot --noautoconsole --import \
-    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/var/lib/libvirt/boot/master.ign" \
     > /dev/null || err "Creating master-${i} vm failed "; ok
 done
 
@@ -1009,9 +1027,9 @@ do
     --ram ${WOR_MEM} --cpu host --vcpus ${WOR_CPU} \
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2",format=qcow2,bus=virtio \
+    --disk path=/tmp/worker.iso,device=cdrom \
     --network network=${VIR_NET},model=virtio \
     --noreboot --noautoconsole --import \
-    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/var/lib/libvirt/boot/worker.ign" \
     > /dev/null || err "Creating worker-${i} vm failed "; ok
 done
 
