@@ -318,7 +318,7 @@ test -z "$PULL_SEC_F" && PULL_SEC_F="/opt/pull-secret"; PULL_SEC=$(cat "$PULL_SE
 
 OKD_MIRROR="https://github.com/openshift/okd/releases/download"
 FCOS_MIRROR="https://builds.coreos.fedoraproject.org/prod/streams/stable/builds"
-LB_IMG_URL="https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.4.2105-20210603.0.x86_64.qcow2"
+LB_IMG_URL="https://raw.repo.almalinux.org/almalinux/10.0/cloud/x86_64_v2/images/AlmaLinux-10-GenericCloud-latest.x86_64_v2.qcow2"
 
 ok() {
     test -z "$1" && echo "ok" || echo "$1"
@@ -499,10 +499,10 @@ IMAGE_SIG_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE_SIG}"
 echo "====> ${IMAGE_URL_SIG}"
 echo -n "====> Checking if Image signature URL is downloadable: "; download check "$IMAGE_SIG" "$IMAGE_SIG__URL";
 
-# CENTOS CLOUD IMAGE
+# AlmaLinux CLOUD IMAGE
 LB_IMG="${LB_IMG_URL##*/}"
 echo "====> ${LB_IMG_URL}"
-echo -n "====> Checking if Centos cloud image URL is downloadable: "; download check "$LB_IMG" "$LB_IMG_URL";
+echo -n "====> Checking if AlmaLinux cloud image URL is downloadable: "; download check "$LB_IMG" "$LB_IMG_URL";
 
 echo
 echo
@@ -731,7 +731,7 @@ EOF
 
 
 
-echo "
+cat > haproxy.cfg <<EOF
 global
   log 127.0.0.1 local2
   chroot /var/lib/haproxy
@@ -755,46 +755,60 @@ defaults
   timeout server 1m
   timeout check 10s
   maxconn 3000
-# 6443 points to control plan
-frontend ${CLUSTER_NAME}-api *:6443
+
+# 6443 points to control plane
+frontend ${CLUSTER_NAME}-api
+  bind *:6443
   default_backend master-api
 backend master-api
   balance source
-  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:6443 check" > haproxy.cfg
-for i in $(seq 1 ${N_MAST})
-do
+  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:6443 check
+EOF
+
+for i in $(seq 1 ${N_MAST}); do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:6443 check" >> haproxy.cfg
 done
-echo "
+
+cat >> haproxy.cfg <<EOF
 
 # 22623 points to control plane
-frontend ${CLUSTER_NAME}-mapi *:22623
+frontend ${CLUSTER_NAME}-mapi
+  bind *:22623
   default_backend master-mapi
 backend master-mapi
   balance source
-  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:22623 check" >> haproxy.cfg
-for i in $(seq 1 ${N_MAST})
-do
+  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:22623 check
+EOF
+
+for i in $(seq 1 ${N_MAST}); do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:22623 check" >> haproxy.cfg
 done
-echo "
+
+cat >> haproxy.cfg <<EOF
+
 # 80 points to master nodes
-frontend ${CLUSTER_NAME}-http *:80
+frontend ${CLUSTER_NAME}-http
+  bind *:80
   default_backend ingress-http
 backend ingress-http
-  balance source" >> haproxy.cfg
-for i in $(seq 1 ${N_MAST})
-do
+  balance source
+EOF
+
+for i in $(seq 1 ${N_MAST}); do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:80 check" >> haproxy.cfg
 done
-echo "
+
+cat >> haproxy.cfg <<EOF
+
 # 443 points to master nodes
-frontend ${CLUSTER_NAME}-https *:443
+frontend ${CLUSTER_NAME}-https
+  bind *:443
   default_backend infra-https
 backend infra-https
-  balance source" >> haproxy.cfg
-for i in $(seq 1 ${N_MAST})
-do
+  balance source
+EOF
+
+for i in $(seq 1 ${N_MAST}); do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
 done
 
@@ -806,30 +820,33 @@ echo "### CREATING LOAD BALANCER VM ###"
 echo "#################################"
 echo
 
-
-echo -n "====> Downloading Centos cloud image: "; download get "$LB_IMG" "$LB_IMG_URL";
+echo -n "====> Downloading AlmaLinux 10 cloud image: "; download get "$LB_IMG" "$LB_IMG_URL";
 
 echo -n "====> Copying Image for Loadbalancer VM: "
-cp "${CACHE_DIR}/${LB_IMG_URL##*/}" "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" || \
+cp "${CACHE_DIR}/${LB_IMG}" "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" || \
     err "Copying '${VM_DIR}/${LB_IMG}' to '${VM_DIR}/${CLUSTER_NAME}-lb.qcow2' failed"; ok
 
 echo "====> Setting up Loadbalancer VM: "
 virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
-    --uninstall cloud-init --ssh-inject root:file:$SSH_KEY --selinux-relabel --install haproxy --install bind-utils \
-    --copy-in install_dir/bootstrap.ign:/opt/ --copy-in install_dir/master.ign:/opt/ --copy-in install_dir/worker.ign:/opt/ \
-    --copy-in "${CACHE_DIR}/${IMAGE}":/opt/ --copy-in "${CACHE_DIR}/${IMAGE_SIG}":/opt/ --copy-in tmpws.service:/etc/systemd/system/ \
-    --copy-in haproxy.cfg:/etc/haproxy/ \
-    --run-command "systemctl daemon-reload" --run-command "systemctl enable tmpws.service" || \
-    err "Setting up Loadbalancer VM image ${VM_DIR}/${CLUSTER_NAME}-lb.qcow2 failed"
+    --uninstall cloud-init --ssh-inject root:file:$SSH_KEY --selinux-relabel \
+    --copy-in install_dir/bootstrap.ign:/opt/ \
+    --copy-in install_dir/master.ign:/opt/ \
+    --copy-in install_dir/worker.ign:/opt/ \
+    --copy-in "${CACHE_DIR}/${IMAGE}":/opt/ \
+    --copy-in "${CACHE_DIR}/${IMAGE_SIG}":/opt/ \
+    --copy-in tmpws.service:/etc/systemd/system/ \
+    --run-command "systemctl daemon-reload" \
+    --run-command "systemctl enable tmpws.service" || \
+    err "Setting up Loadbalancer VM image failed"
 
 echo -n "====> Creating Loadbalancer VM: "
 virt-install --import --name ${CLUSTER_NAME}-lb --disk "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
-    --memory ${LB_MEM} --cpu host --vcpus ${LB_CPU} --os-type linux --os-variant rhel7-unknown --network network=${VIR_NET},model=virtio \
-    --noreboot --noautoconsole > /dev/null || \
-    err "Creating Loadbalancer VM from ${VM_DIR}/${CLUSTER_NAME}-lb.qcow2 failed"; ok
+    --memory ${LB_MEM} --cpu host --vcpus ${LB_CPU} --os-type linux --os-variant almalinux9 \
+    --network network=${VIR_NET},model=virtio --noreboot --noautoconsole > /dev/null || \
+    err "Creating Loadbalancer VM failed"; ok
 
 echo -n "====> Starting Loadbalancer VM "
-virsh start ${CLUSTER_NAME}-lb > /dev/null || err "Starting Loadbalancer VM ${CLUSTER_NAME}-lb failed"; ok
+virsh start ${CLUSTER_NAME}-lb > /dev/null || err "Starting Loadbalancer VM failed"; ok
 
 echo -n "====> Waiting for Loadbalancer VM to obtain IP address: "
 while true; do
@@ -857,6 +874,25 @@ while true; do
     break
 done
 ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" true || err "SSH to lb.${CLUSTER_NAME}.${BASE_DOM} failed"; ok
+
+# HAPROXY TELEPÍTÉS ÉS KONFIGURÁCIÓ SSH-N KERESZTÜL
+echo "====> Installing haproxy and bind-utils on Loadbalancer VM: "
+ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "dnf install -y haproxy bind-utils" || \
+    err "Failed to install haproxy and bind-utils"
+
+echo "====> Copying haproxy.cfg to Loadbalancer VM: "
+scp -i sshkey haproxy.cfg lb.${CLUSTER_NAME}.${BASE_DOM}:/etc/haproxy/haproxy.cfg || \
+    err "Failed to copy haproxy.cfg"
+
+echo "====> Setting SELinux to permissive mode permanently: "
+ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "setenforce 0 && sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config" || \
+    err "Failed to set SELinux to permissive"
+
+echo "====> Enabling haproxy service: "
+ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "systemctl enable haproxy" || err "Failed to enable haproxy service"
+
+echo "====> Starting haproxy service: "
+ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "systemctl start haproxy" || err "Failed to start haproxy service"
 
 
 
