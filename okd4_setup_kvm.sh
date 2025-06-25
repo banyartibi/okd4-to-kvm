@@ -351,18 +351,18 @@ echo "##########################################"
 echo "########### CPUs and RAM CHECK ###########"
 echo "##########################################"
 echo
-AVAILABLE_CPUS=$(lscpu | grep '^CPU(s)' | cut -f2 -d':' | tr -d ' ')
+AVAILABLE_CPUS=$(lscpu | grep '^CPU(s)' | cut -f2 -d':' | tr -d ' '|head -1)
 AVAILABLE_RAM_INKB=$(cat /proc/meminfo  | grep MemTotal | awk '{print $2}')
 AVAILABLE_RAM=$(( AVAILABLE_RAM_INKB / 1024 ))
 REQUESTED_RAM=$(( N_MAST * MAS_MEM + N_WORK * WOR_MEM + BTS_MEM + LB_MEM ))
 REQUESTED_CPUS=$(( N_MAST * MAS_CPU + N_WORK * WOR_CPU + BTS_CPU + LB_CPU  ))
 
 echo -n "====> Checking available CPUs :"
-test ${REQUESTED_CPUS} -le ${AVAILABLE_CPUS} || err "Requested CPUs: ${REQUESTED_CPUS} \t\t Available CPUs: ${AVAILABLE_CPUS}"
+test "${REQUESTED_CPUS}" -le "${AVAILABLE_CPUS}" || err "Requested CPUs: ${REQUESTED_CPUS} \t\t Available CPUs: ${AVAILABLE_CPUS}"
 ok
 
 echo -n "====> Checking available RAM :"
-test ${REQUESTED_RAM} -le ${AVAILABLE_RAM} || err "Requested RAM: ${REQUESTED_RAM} \t\t Available RAM: ${AVAILABLE_RAM}"
+test "${REQUESTED_RAM}" -le "${AVAILABLE_RAM}" || err "Requested RAM: ${REQUESTED_RAM} \t\t Available RAM: ${AVAILABLE_RAM}"
 ok
 
 if [ "$CLEANUP" == "yes" ]; then
