@@ -451,7 +451,7 @@ echo -n "====> Checking if Installer URL is downloadable: ";  download check "$I
 # FCOS KERNEL, INITRAMFS AND IMAGE FILES
 
 echo -n "====> Looking up FCOS kernel for release ${FCOS_VERSION}: "
-KERNEL="fedora-coreos-${FCOS_VERSION}-live-kernel-x86_64"; ok "$KERNEL"
+KERNEL="fedora-coreos-${FCOS_VERSION}-live-kernel.x86_64"; ok "$KERNEL"
 KERNEL_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${KERNEL}"
 echo "====> ${KERNEL_URL}"
 echo -n "====> Checking if Kernel URL is downloadable: "; download check "$KERNEL" "$KERNEL_URL";
