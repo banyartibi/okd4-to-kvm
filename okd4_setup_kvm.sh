@@ -308,7 +308,7 @@ test -z "$VIR_NET" -a -z "$VIR_NET_OCT" && VIR_NET="default"
 test -n "$VIR_NET" -a -n "$VIR_NET_OCT" && err "Specify either -n or -N" 
 test -z "$CLUSTER_NAME" && CLUSTER_NAME="okd4"
 test -z "$BASE_DOM" && BASE_DOM="local"
-tesz -z "$NETWORK_TYPE" && NETWORK_TYPE="OVNKubernetes"
+test -z "$NETWORK_TYPE" && NETWORK_TYPE="OVNKubernetes"
 test -z "$DNS_DIR" && DNS_DIR="/etc/NetworkManager/dnsmasq.d"
 test -z "$VM_DIR" && VM_DIR="/opt/libvirt/images"
 test -z "$FRESH_DOWN" && FRESH_DOWN="no"
@@ -689,8 +689,8 @@ EOF
 
 
 echo "====> Creating ignition configs: "
-./openshift-install create ignition-configs --dir=./install_dir || \
-    err "./openshift-install create ignition-configs --dir=./install_dir failed"
+./openshift-install create ignition-configs --dir=$SETUP_DIR/install_dir || \
+    err "./openshift-install create ignition-configs --dir=$SETUP_DIR/install_dir failed"
 
 WS_PORT="1234"
 cat <<EOF > tmpws.service
