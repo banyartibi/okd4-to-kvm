@@ -398,6 +398,10 @@ if [ "$CLEANUP" == "yes" ]; then
     echo "##################"
     echo 
 
+    if [ -f /var/lib/libvirt/boot/bootstrap.ign ]; then rm -rf /var/lib/libvirt/boot/bootstrap.ign; fi
+    if [ -f /var/lib/libvirt/boot/master.ign ]; then rm -rf /var/lib/libvirt/boot/master.ign; fi
+    if [ -f /var/lib/libvirt/boot/worker.ign ]; then rm -rf /var/lib/libvirt/boot/worker.ign; fi
+
     if [ -n "$VIR_NET_OCT" -a -z "$VIR_NET" ]; then
         VIR_NET="okd-${VIR_NET_OCT}"
     fi
@@ -951,6 +955,14 @@ echo "#### CREATE BOOTSTRAPING FCOS/OKD NODES ###"
 echo "############################################"
 echo 
 
+echo  -n "====> Copy ignition files to /var/lib/libvirt/boot/ "
+echo
+cp /opt/OKD4_setup_biti-okd/install_dir/*.ign /var/lib/libvirt/boot/
+chmod 644 /var/lib/libvirt/boot/*.ign
+ls -la /var/lib/libvirt/boot/
+echo
+echo
+
 echo -n "====> Creating Bootstrap VM: "
 cp "${CACHE_DIR}/${IMAGE%.xz}" "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2"
 qemu-img resize "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2" 100G
@@ -961,7 +973,7 @@ virt-install --name ${CLUSTER_NAME}-bootstrap \
   --disk path="${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2",format=qcow2,bus=virtio \
   --network network=${VIR_NET},model=virtio \
   --noreboot --noautoconsole --import \
-  --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/install_dir/bootstrap.ign" \
+  --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/var/lib/libvirt/boot/bootstrap.ign" \
   > /dev/null || err "Creating bootstrap vm failed"; ok
 
 
@@ -983,7 +995,7 @@ do
     --disk path="${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2",format=qcow2,bus=virtio \
     --network network=${VIR_NET},model=virtio \
     --noreboot --noautoconsole --import \
-    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/install_dir/master.ign" \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/var/lib/libvirt/boot/master.ign" \
     > /dev/null || err "Creating master-${i} vm failed "; ok
 done
 
@@ -999,7 +1011,7 @@ do
     --disk path="${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2",format=qcow2,bus=virtio \
     --network network=${VIR_NET},model=virtio \
     --noreboot --noautoconsole --import \
-    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/install_dir/worker.ign" \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/var/lib/libvirt/boot/worker.ign" \
     > /dev/null || err "Creating worker-${i} vm failed "; ok
 done
 
