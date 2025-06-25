@@ -960,21 +960,21 @@ echo
 if [ -f /tmp/bootstrap.iso ]; then
     rm -f /tmp/bootstrap.iso
 fi
-genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock ${SETUP_DIR}/install_dir/bootstrap.ign
+genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock -input-charset utf-8 ${SETUP_DIR}/install_dir/bootstrap.ign
 chmod 644 /tmp/bootstrap.iso
 
 # Master ignition ISO (ha minden masterhez külön .ign kell, akkor ciklussal)
 if [ -f /tmp/master.iso ]; then
     rm -f /tmp/master.iso
 fi
-genisoimage -output /tmp/master.iso -volid config-2 -joliet -rock ${SETUP_DIR}/install_dir/master.ign
+genisoimage -output /tmp/master.iso -volid config-2 -joliet -rock -input-charset utf-8 ${SETUP_DIR}/install_dir/master.ign
 chmod 644 /tmp/master.iso
 
 # Worker ignition ISO (ha minden workerhez külön .ign kell, akkor ciklussal)
 if [ -f /tmp/worker.iso ]; then
     rm -f /tmp/worker.iso
 fi
-genisoimage -output /tmp/worker.iso -volid config-2 -joliet -rock ${SETUP_DIR}/install_dir/worker.ign
+genisoimage -output /tmp/worker.iso -volid config-2 -joliet -rock -input-charset utf-8 ${SETUP_DIR}/install_dir/worker.ign
 chmod 644 /tmp/worker.iso
 echo
 ls -la /tmp/*.iso
