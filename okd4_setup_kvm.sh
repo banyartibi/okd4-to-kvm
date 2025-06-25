@@ -69,6 +69,11 @@ case $key in
     shift
     shift
     ;;
+    -t|--network-type)
+    export NETWORK_TYPE="$2"
+    shift
+    shift
+    ;;    
     -v|--vm-dir)
     VM_DIR="$2"
     shift
@@ -303,6 +308,7 @@ test -z "$VIR_NET" -a -z "$VIR_NET_OCT" && VIR_NET="default"
 test -n "$VIR_NET" -a -n "$VIR_NET_OCT" && err "Specify either -n or -N" 
 test -z "$CLUSTER_NAME" && CLUSTER_NAME="okd4"
 test -z "$BASE_DOM" && BASE_DOM="local"
+tesz -z "$NETWORK_TYPE" && NETWORK_TYPE="OpenShiftSDN"
 test -z "$DNS_DIR" && DNS_DIR="/etc/NetworkManager/dnsmasq.d"
 test -z "$VM_DIR" && VM_DIR="/opt/libvirt/images"
 test -z "$FRESH_DOWN" && FRESH_DOWN="no"
@@ -665,7 +671,7 @@ networking:
   clusterNetworks:
   - cidr: 10.128.0.0/14
     hostPrefix: 23
-  networkType: OpenShiftSDN
+  networkType: ${NETWORK_TYPE}
   serviceNetwork:
   - 172.30.0.0/16
 platform:
@@ -1221,6 +1227,7 @@ export DNS_DIR="$DNS_DIR"
 export VM_DIR="$VM_DIR"
 export SETUP_DIR="$SETUP_DIR"
 export BASE_DOM="$BASE_DOM"
+export NETWORK_TYPE="$NETWORK_TYPE"
 export DNS_CMD="$DNS_CMD"
 export DNS_SVC="$DNS_SVC"
 
