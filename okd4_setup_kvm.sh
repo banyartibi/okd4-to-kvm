@@ -960,22 +960,28 @@ echo
 if [ -f /tmp/bootstrap.iso ]; then
     rm -f /tmp/bootstrap.iso
 fi
-genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock -input-charset utf-8 ${SETUP_DIR}/install_dir/bootstrap.ign
+mkdir /tmp/bootstrap_ign
+cp ${SETUP_DIR}/install_dir/bootstrap.ign /tmp/bootstrap_ign/config.ign
+genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/bootstrap_ign/config.ign
 chmod 644 /tmp/bootstrap.iso
 
 # Master ignition ISO (ha minden masterhez külön .ign kell, akkor ciklussal)
 if [ -f /tmp/master.iso ]; then
     rm -f /tmp/master.iso
 fi
-genisoimage -output /tmp/master.iso -volid config-2 -joliet -rock -input-charset utf-8 ${SETUP_DIR}/install_dir/master.ign
+mkdir /tmp/master_ign
+cp ${SETUP_DIR}/install_dir/master.ign /tmp/master_ign/config.ign
+genisoimage -output /tmp/master.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/master_ign/config.ign
 chmod 644 /tmp/master.iso
 
 # Worker ignition ISO (ha minden workerhez külön .ign kell, akkor ciklussal)
 if [ -f /tmp/worker.iso ]; then
     rm -f /tmp/worker.iso
 fi
-genisoimage -output /tmp/worker.iso -volid config-2 -joliet -rock -input-charset utf-8 ${SETUP_DIR}/install_dir/worker.ign
-chmod 644 /tmp/worker.iso
+mkdir /tmp/worker_ign
+cp ${SETUP_DIR}/install_dir/worker.ign /tmp/worker_ign/config.ign
+genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/worker_ign/config.ign
+chmod 644 /tmp/bootstrap.iso
 echo
 ls -la /tmp/*.iso
 echo
