@@ -17,7 +17,7 @@ We have modified shell script to work with OKD.
 | :------------ | :------------ |
 | -O, --okd-version VERSION | You can set this to a specific version like 4.15.0-0.okd-2024-03-10-010116 etc. More info on https://github.com/OKD/okd/releases.<br>Default: 4.15.0-0.okd-2024-03-10-010116 |
 | -R, --rhcos-version VERSION | You can set a specific FCOS version to use. For example "32.20200809.3.0" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.<br>Default: 32.20200809.3.0  |
-| -p, --pull-secret FILE | Location of the pull secret file<br>Default: /root/pull-secret |
+| -p, --pull-secret FILE | Location of the pull secret file<br>Default: /opt/pull-secret |
 | -c, --cluster-name NAME | OKD 4 cluster name<br>Default: okd4 |
 | -d, --cluster-domain DOMAIN | OKD 4 cluster domain<br>Default: local |
 | -t, --network-type TYPE | OpenShift 4 cluster network type<br>Default: OVNKubernetes |
