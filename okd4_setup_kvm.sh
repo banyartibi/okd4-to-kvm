@@ -499,11 +499,18 @@ for x in virsh virt-install virt-customize systemctl dig wget
 do
     builtin type -P $x &> /dev/null || err "executable $x not found"
 done
-for f in "/usr/lib64/libvirt/connection-driver/libvirt_driver_network.so" \
-         "/usr/share/libvirt/networks/default.xml"
-do
-    test -e "$f" &> /dev/null || err "file $f not found"
-done
+
+# Libvirt network driver: legalább az egyik elérési úton legyen meg
+DRIVER1="/usr/lib64/libvirt/connection-driver/libvirt_driver_network.so"
+DRIVER2="/usr/lib/x86_64-linux-gnu/libvirt/connection-driver/libvirt_driver_network.so"
+DEFAULT_NET="/usr/share/libvirt/networks/default.xml"
+
+if ! [ -e "$DRIVER1" ] && ! [ -e "$DRIVER2" ]; then
+    err "file $DRIVER1 or $DRIVER2 not found"
+fi
+
+test -e "$DEFAULT_NET" &> /dev/null || err "file $DEFAULT_NET not found"
+
 ok
 
 echo -n "====> Checking if the script/working directory already exists: "
