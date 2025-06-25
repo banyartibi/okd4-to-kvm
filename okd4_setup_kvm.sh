@@ -995,8 +995,11 @@ cp ${SETUP_DIR}/install_dir/worker.ign /tmp/worker_ign/config.ign
 genisoimage -output /tmp/worker.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/worker_ign/config.ign
 chmod 644 /tmp/worker.iso
 echo
+chmod -R 777 /tmp/*_ign/config.ign
+echo
 ls -la /tmp/*.iso
 echo
+ls -la /tmp/*_ign/*
 echo
 
 echo -n "====> Creating Bootstrap VM: "
@@ -1007,9 +1010,8 @@ virt-install --name ${CLUSTER_NAME}-bootstrap \
   --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
   --os-variant fedora-coreos-stable \
   --disk path="${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2",format=qcow2,bus=virtio \
-  --cdrom /tmp/bootstrap.iso \
-  --boot cdrom,hd,menu=on \
   --network network=${VIR_NET},model=virtio \
+  --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/tmp/bootstrap_ign/config.ign" \
   --noreboot --noautoconsole --import \
   > /dev/null || err "Creating bootstrap vm failed"; ok
 
@@ -1030,9 +1032,8 @@ do
     --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2",format=qcow2,bus=virtio \
-    --cdrom /tmp/master.iso \
-    --boot cdrom,hd,menu=on \
     --network network=${VIR_NET},model=virtio \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/tmp/master_ign/config.ign" \
     --noreboot --noautoconsole --import \
     > /dev/null || err "Creating master-${i} vm failed "; ok
 done
@@ -1047,9 +1048,8 @@ do
     --ram ${WOR_MEM} --cpu host --vcpus ${WOR_CPU} \
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2",format=qcow2,bus=virtio \
-    --cdrom /tmp/worker.iso \
-    --boot cdrom,hd,menu=on \
     --network network=${VIR_NET},model=virtio \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/tmp/worker_ign/config.ign" \
     --noreboot --noautoconsole --import \
     > /dev/null || err "Creating worker-${i} vm failed "; ok
 done
