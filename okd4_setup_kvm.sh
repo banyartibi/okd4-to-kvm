@@ -181,11 +181,11 @@ echo
 cat << EOF | column -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 
 -O, --okd-version VERSION|The OKD version to install.
-|You can set this to a specific version like "4.5.0-0.okd-2020-08-12-020541" etc. More info on https://github.com/openshift/okd/releases.
-|Default: 4.5.0-0.okd-2020-08-12-020541
+|You can set this to a specific version like "4.15.0-0.okd-2024-03-10-010116" etc. More info on https://github.com/openshift/okd/releases.
+|Default: 4.15.0-0.okd-2024-03-10-010116
 
--R, --fcos-version VERSION|You can set a specific FCOS version to use. For example "32.20200809.3.0" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.
-|Default: 32.20200809.3.0
+-R, --fcos-version VERSION|You can set a specific FCOS version to use. For example "42.20250609.3.0" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.
+|Default: 42.20250609.3.0
 
 -p, --pull-secret FILE|Location of the pull secret file
 |Default: /opt/pull-secret
@@ -268,21 +268,21 @@ EOF
 echo
 echo "Examples:"
 echo
-echo "# Deploy OKD 4.5.0-0.okd-2020-08-12-020541 cluster"
-echo "${0} --okd-version 4.5.0-0.okd-2020-08-12-020541"
-echo "${0} -O 4.5.0-0.okd-2020-08-12-020541"
+echo "# Deploy OKD 4.19.0-okd-scos.6 cluster"
+echo "${0} --okd-version 4.19.0-okd-scos.6"
+echo "${0} -O 4.19.0-okd-scos.6"
 echo 
-echo "# Deploy OKD 4.5.0-0.okd-2020-08-12-020541 cluster with FCOS 32.20200809.3.0"
-echo "${0} --okd-version 4.3.12 --fcos-version 32.20200809.3.0"
-echo "${0} -O 4.5.0-0.okd-2020-08-12-020541 -R 32.20200809.3.0"
+echo "# Deploy OKD 4.20.0-okd-scos.ec.5 cluster with FCOS 42.20250609.3.0"
+echo "${0} --okd-version 4.20.0-okd-scos.ec.5 --fcos-version 42.20250609.3.0"
+echo "${0} -O 4.20.0-okd-scos.ec.5 -R 42.20250609.3.0"
 echo 
-echo "# Deploy OKD 4.5.0-0.okd-2020-08-12-020541 with custom cluster name and domain"
-echo "${0} --cluster-name OKD45 --cluster-domain lab.test.com --okd-version 4.5.0-0.okd-2020-08-12-020541"
-echo "${0} -c OKD45 -d lab.test.com -O 4.5.0-0.okd-2020-08-12-020541"
+echo "# Deploy OKD 4.15.0-0.okd-2024-03-10-010116 with custom cluster name and domain"
+echo "${0} --cluster-name OKD45 --cluster-domain lab.test.com --okd-version 4.15.0-0.okd-2024-03-10-010116"
+echo "${0} -c OKD45 -d lab.test.com -O 4.15.0-0.okd-2024-03-10-010116"
 echo
-echo "# Deploy OKD 4.5.0-0.okd-2020-08-12-020541 on new libvirt network (192.168.155.0/24)"
-echo "${0} --okd-version 4.5.0-0.okd-2020-08-12-020541 --libvirt-oct 155"
-echo "${0} -O 4.5.0-0.okd-2020-08-12-020541 -N 155"
+echo "# Deploy OKD 4.15.0-0.okd-2024-03-10-010116 on new libvirt network (192.168.155.0/24)"
+echo "${0} --okd-version 4.15.0-0.okd-2024-03-10-010116 --libvirt-oct 155"
+echo "${0} -O 4.15.0-0.okd-2024-03-10-010116 -N 155"
 echo 
 echo "# Destory the already installed cluster"
 echo "${0} --cluster-name OKD45 --cluster-domain lab.test.com --destroy-installation"
@@ -292,8 +292,8 @@ exit
 fi
 
 # Default Values
-test -z "$OKD_VERSION" && OKD_VERSION="4.5.0-0.okd-2020-08-12-020541"
-test -z "$FCOS_VERSION" && FCOS_VERSION="32.20200726.3.1"
+test -z "$OKD_VERSION" && OKD_VERSION="4.15.0-0.okd-2024-03-10-010116"
+test -z "$FCOS_VERSION" && FCOS_VERSION="42.20250609.3.0"
 test -z "$N_MAST" && N_MAST="2"
 test -z "$N_WORK" && N_WORK="3"
 test -z "$MAS_CPU" && MAS_CPU="8"
@@ -318,7 +318,7 @@ test -z "$PULL_SEC_F" && PULL_SEC_F="/opt/pull-secret"; PULL_SEC=$(cat "$PULL_SE
 
 OKD_MIRROR="https://github.com/openshift/okd/releases/download"
 FCOS_MIRROR="https://builds.coreos.fedoraproject.org/prod/streams/stable/builds"
-LB_IMG_URL="https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
+LB_IMG_URL="https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.4.2105-20210603.0.x86_64.qcow2"
 
 ok() {
     test -z "$1" && echo "ok" || echo "$1"

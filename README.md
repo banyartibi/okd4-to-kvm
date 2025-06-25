@@ -15,7 +15,7 @@ We have modified shell script to work with OKD.
 
 | Option  |Description   |
 | :------------ | :------------ |
-| -O, --okd-version VERSION | You can set this to a specific version like 4.5.0-0.okd-2020-08-12-020541 etc. More info on https://github.com/OKD/okd/releases.<br>Default: 4.5.0-0.okd-2020-08-12-020541 |
+| -O, --okd-version VERSION | You can set this to a specific version like 4.15.0-0.okd-2024-03-10-010116 etc. More info on https://github.com/OKD/okd/releases.<br>Default: 4.15.0-0.okd-2024-03-10-010116 |
 | -R, --rhcos-version VERSION | You can set a specific FCOS version to use. For example "32.20200809.3.0" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.<br>Default: 32.20200809.3.0  |
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /root/pull-secret |
 | -c, --cluster-name NAME | OKD 4 cluster name<br>Default: okd4 |
@@ -45,29 +45,29 @@ We have modified shell script to work with OKD.
 
 
 ### Examples
-    # Deploy OKD 4.5.0-0.okd-2020-08-12-020541 cluster
-    ./okd4_setup_kvm.sh --okd-version 4.5.0-0.okd-2020-08-12-020541
-    ./okd4_setup_kvm.sh -O 4.5.0-0.okd-2020-08-12-020541
+    # Deploy OKD 4.19.0-okd-scos.6 cluster
+    ./okd4_setup_kvm.sh --okd-version 4.19.0-okd-scos.6
+    ./okd4_setup_kvm.sh -O 4.19.0-okd-scos.6
 
-    # Deploy OKD 4.5.0-0.okd-2020-08-12-020541 cluster with RHCOS 32.20200809.3.0
-    ./okd4_setup_kvm.sh --okd-version 4.5.0-0.okd-2020-08-12-020541 --rhcos-version 32.20200809.3.0
-    ./okd4_setup_kvm.sh -O 4.5.0-0.okd-2020-08-12-020541 -R 32.20200809.3.0
+    # Deploy OKD 4.20.0-okd-scos.ec.5 cluster with RHCOS 42.20250609.3.0
+    ./okd4_setup_kvm.sh --okd-version 4.20.0-okd-scos.ec.5 --rhcos-version 42.20250609.3.0
+    ./okd4_setup_kvm.sh -O 4.20.0-okd-scos.ec.5 -R 42.20250609.3.0
 
-    # Deploy 4.5.0-0.okd-2020-08-12-020541 OKD version with pull secret from a custom location
+    # Deploy 4.15.0-0.okd-2024-03-10-010116 OKD version with pull secret from a custom location
     ./okd4_setup_kvm.sh --pull-secret ~/pull-secret --okd-version latest
-    ./okd4_setup_kvm.sh -p ~/pull-secret -O 4.5.0-0.okd-2020-08-12-020541
+    ./okd4_setup_kvm.sh -p ~/pull-secret -O 4.15.0-0.okd-2024-03-10-010116
 
-    # Deploy OKD 4.5.0-0.okd-2020-08-12-020541 with custom cluster name and domain
-    ./okd4_setup_kvm.sh --cluster-name okd45 --cluster-domain lab.test.com --okd-version 4.5.0-0.okd-2020-08-12-020541
-    ./okd4_setup_kvm.sh -c okd45 -d lab.test.com -O 4.5.0-0.okd-2020-08-12-020541
+    # Deploy OKD 4.15.0-0.okd-2024-03-10-010116 with custom cluster name and domain
+    ./okd4_setup_kvm.sh --cluster-name okd45 --cluster-domain lab.test.com --okd-version 4.15.0-0.okd-2024-03-10-010116
+    ./okd4_setup_kvm.sh -c okd45 -d lab.test.com -O 4.15.0-0.okd-2024-03-10-010116
 
-    # Deploy OKD 4.5.0-0.okd-2020-08-12-020541 on new libvirt network (192.168.155.0/24)
-    ./okd4_setup_kvm.sh --okd-version 4.5.0-0.okd-2020-08-12-020541 --libvirt-oct 155
-    ./okd4_setup_kvm.sh -O 4.5.0-0.okd-2020-08-12-020541 -N 155
+    # Deploy OKD 4.15.0-0.okd-2024-03-10-010116 on new libvirt network (192.168.155.0/24)
+    ./okd4_setup_kvm.sh --okd-version 4.15.0-0.okd-2024-03-10-010116 --libvirt-oct 155
+    ./okd4_setup_kvm.sh -O 4.15.0-0.okd-2024-03-10-010116 -N 155
 
-    # Deploy OKD 4.5.0-0.okd-2020-08-12-020541 with OpenShiftSDN network type
-    ./okd4_setup_kvm.sh --okd-version 4.5.0-0.okd-2020-08-12-020541 --network-type OpenShiftSDN
-    ./okd4_setup_kvm.sh -O 4.5.0-0.okd-2020-08-12-020541 -t OpenShiftSDN
+    # Deploy OKD 4.15.0-0.okd-2024-03-10-010116 with OpenShiftSDN network type
+    ./okd4_setup_kvm.sh --okd-version 4.15.0-0.okd-2024-03-10-010116 --network-type OpenShiftSDN
+    ./okd4_setup_kvm.sh -O 4.15.0-0.okd-2024-03-10-010116 -t OpenShiftSDN
 
     # Destory the already installed cluster
     ./okd4_setup_kvm.sh --cluster-name okd45 --cluster-domain lab.test.com --destroy
