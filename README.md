@@ -1,8 +1,15 @@
-# OKD 4 Automated Cluster Installation (on KVM) Script
+# OKD 4 Automated Cluster Installation (on QEMU/KVM) Script
 
-Original Work: https://github.com/kxr/ocp4_setup_upi_kvm. 
+Original Work: https://github.com/gunjangarge/okd4-setup-kvm based on https://github.com/kxr/ocp4_setup_upi_kvm
 
-We have modified shell script to work with OKD.
+I am updated and reworked the script to work with modern versions of OKD and FCOS/SCOS
+
+You can define your OKD and FCOS versions and now also able to define streams for FCOS not only stable but testing and next too.
+Implemented OVNKubernetes as default NetworkType but as some versions between 4.12 and 4.14 can work with both OpenshiftSDN or OVNKubernetes so now there is an option to define NetworkType if you want to use older OKD or those what can run both type.
+
+From 4.16 releases are based on SCOS (CentOS Stream CoreOS) not FCOS. There were possible builds on SCOS from OKD 4.12 releases but the last one 4.15.0-0.okd-2024-03-10-010116 for FCOS while fist 4.16.0-okd-scos.1 is ONLY SCOS based. As latest 4.15 requires Fedora CoreOS 39.20240210.3 I set 39.20240210.3.0 as default FCOS for the default OKD 4.15.
+
+There is an option to use the OKD version's openshift-install to list matching CoreOS image (FCOS or SCOS) instead of define it. It's safe and much better to use this flag however the default is "no" at the moment. Tested it with latest stable OKD 4.19 what downloaded matching SCOS image what working like a charm.
 
 ### Prerequistes:
 
@@ -18,6 +25,7 @@ We have modified shell script to work with OKD.
 | -O, --okd-version VERSION | You can set this to a specific version like 4.15.0-0.okd-2024-03-10-010116 etc. More info on https://github.com/OKD/okd/releases.<br>Default: 4.15.0-0.okd-2024-03-10-010116 |
 | -R, --fcos-version VERSION | You can set a specific FCOS version to use. For example "39.20240210.3.0" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.<br>Default: 39.20240210.3.0  |
 | -F, --fcos-stream STREAM | Steam of the image version you trying to download (stable/testing/next)<br>Default: stable |
+| -S, --find-fcos, --find-scos | Let the installation script find the matching CoreOS image for your OKD version<br>Default: no |
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /opt/pull-secret |
 | -c, --cluster-name NAME | OKD 4 cluster name<br>Default: okd4 |
 | -d, --cluster-domain DOMAIN | OKD 4 cluster domain<br>Default: local |

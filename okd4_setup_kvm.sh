@@ -36,6 +36,11 @@ case $key in
     shift
     shift
     ;;
+    -S|--find-fcos|--find-scos)
+    FIND_SCOS="yes"
+    shift
+    shift
+    ;;
     -m|--masters)
     N_MAST="$2"
     test "$N_MAST" -gt "0" &>/dev/null || err "Invalid masters: $N_MAST"
@@ -300,6 +305,7 @@ fi
 test -z "$OKD_VERSION" && OKD_VERSION="4.15.0-0.okd-2024-03-10-010116"
 test -z "$FCOS_VERSION" && FCOS_VERSION="39.20240210.3.0"
 test -z "$FCOS_STREAM" && FCOS_STREAM="stable"
+test -z "$FIND_SCOS" && FIND_SCOS="no"
 test -z "$N_MAST" && N_MAST="2"
 test -z "$N_WORK" && N_WORK="3"
 test -z "$MAS_CPU" && MAS_CPU="8"
@@ -533,13 +539,17 @@ echo -n "====> Checking if Installer URL is downloadable: ";  download check "$I
 #IMAGE_SIG_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE_SIG}"
 #echo "====> ${IMAGE_URL_SIG}"
 #echo -n "====> Checking if Image signature URL is downloadable: "; download check "$IMAGE_SIG" "$IMAGE_SIG__URL";
-
-# FCOS QEMU IMAGE FILE
-echo -n "====> Looking up FCOS QEMU image for release ${FCOS_VERSION}: "
-IMAGE="fedora-coreos-${FCOS_VERSION}-qemu.x86_64.qcow2.xz"; ok "$IMAGE"
-IMAGE_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE}"
-echo "====> ${IMAGE_URL}"
-echo -n "====> Checking if Image URL is downloadable: "; download check "$IMAGE" "$IMAGE_URL";
+if [[ "${FIND_SCOS}" == "yes" ]]; then
+  echo "====> Discovering CoreOS image via openshift-install selected"
+  echo "====> Can't list version now..."
+else
+  echo "====> Looking up FCOS QEMU image for release ${FCOS_VERSION}"
+  IMAGE="fedora-coreos-${FCOS_VERSION}-qemu.x86_64.qcow2.xz"
+  IMAGE_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE}"
+  echo "====> Image filename: ${IMAGE}"
+  echo "====> Image URL:      ${IMAGE_URL}"
+  echo -n "====> Checking if Image URL is downloadable: "; download check "${IMAGE}" "${IMAGE_URL}"
+fi
 
 # AlmaLinux CLOUD IMAGE
 LB_IMG="${LB_IMG_URL##*/}"
@@ -550,9 +560,13 @@ echo
 echo
 echo "      OKD Version = $OKD_VERSION"
 echo
-echo "      Fedora CoreOS Version = $FCOS_VERSION"
+if [[ "${FIND_SCOS}" == "yes" ]]; then
+echo "      CoreOS Version will be defined automatically later..."
+else
+echo "      CoreOS Version = $FCOS_VERSION"
+echo "      CoreOS Stream = $FCOS_STREAM"
 echo
-echo "      Fedora CoreOS Stream = $FCOS_STREAM"
+fi
 
 check_if_we_can_continue
 
@@ -709,11 +723,44 @@ echo -n "====> Downloading OCP Installer: "; download get "$INSTALLER" "$INSTALL
 tar -xf "${CACHE_DIR}/${CLIENT}" && rm -f README.md
 tar -xf "${CACHE_DIR}/${INSTALLER}" && rm -f rm -f README.md
 
-echo -n "====> Downloading FCOS Image: "; download get "$IMAGE" "$IMAGE_URL";
+# If $FIND_SCOS = yes define $IMAGE and $IMAGE_URL here
+if [[ "${FIND_SCOS}" == "yes" ]]; then
+  echo "====> Discovering CoreOS image via openshift-install"
+  OC_INSTALL="${SETUP_DIR}/openshift-install"
+  IMAGE_URL=$($OC_INSTALL coreos print-stream-json \
+    | jq -r '.architectures.x86_64.artifacts.qemu.formats 
+        | to_entries[]
+        | select(.value.disk.location | test("qemu\\.x86_64"))
+        | .value.disk.location')
+  IMAGE=$(basename "${IMAGE_URL}")
+  COREOS_VERSION="$(echo "${IMAGE}" | awk -F'-qemu' '{print $1}')"
 
-if [ ! -f "${CACHE_DIR}/${IMAGE%.xz}" ]; then
+  echo
+  echo
+  echo "      OKD Version = $OKD_VERSION"
+  echo
+  echo "      CoreOS Version = $COREOS_VERSION"
+  echo
+
+  echo "====> Image filename: ${IMAGE}"
+  echo "====> Image URL:      ${IMAGE_URL}"
+  echo -n "====> Checking if Image URL is downloadable: "; download check "${IMAGE}" "${IMAGE_URL}"
+  check_if_we_can_continue
+fi
+
+echo -n "====> Downloading CoreOS Image: "; download get "$IMAGE" "$IMAGE_URL"
+
+# Ha még nincs kicsomagolva, akkor unpackoljuk a formátum szerint
+if [ ! -f "${CACHE_DIR}/${IMAGE%%.*}" ]; then
   echo "====> Unpacking QCOW2 image..."
-  unxz -k "${CACHE_DIR}/${IMAGE}"
+  case "$IMAGE" in
+    *.xz)
+      unxz -k "${CACHE_DIR}/${IMAGE}" ;;
+    *.gz)
+      gunzip -k "${CACHE_DIR}/${IMAGE}" ;;
+    *)
+      echo "[WARN] Unknown compression format for ${IMAGE}, skipping unpack." ;;
+  esac
 fi
 #echo -n "====> Downloading FCOS Image signature: "; download get "$IMAGE_SIG" "$IMAGE_SIG_URL";
 #echo -n "====> Downloading FCOS Kernel: "; download get "$KERNEL" "$KERNEL_URL";
@@ -1028,9 +1075,10 @@ echo
 ls -la /tmp/*_ign/*
 echo
 
+BASE_IMAGE="${IMAGE%.*}"
 echo -n "====> Creating Bootstrap VM: "
-cp "${CACHE_DIR}/${IMAGE%.xz}" "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2"
-qemu-img resize "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2" 100G
+cp "${CACHE_DIR}/${BASE_IMAGE}" "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2"
+qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2" 100G
 
 virt-install --name ${CLUSTER_NAME}-bootstrap \
   --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
@@ -1051,8 +1099,8 @@ virt-install --name ${CLUSTER_NAME}-bootstrap \
 for i in $(seq 1 ${N_MAST})
 do
   echo -n "====> Creating Master-${i} VM: "
-  cp "${CACHE_DIR}/${IMAGE%.xz}" "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2"
-  qemu-img resize "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2" 100G
+  cp "${CACHE_DIR}/${BASE_IMAGE}" "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2"
+  qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2" 100G
 
   virt-install --name ${CLUSTER_NAME}-master-${i} \
     --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
@@ -1067,8 +1115,8 @@ done
 for i in $(seq 1 ${N_WORK})
 do
   echo -n "====> Creating Worker-${i} VM: "
-  cp "${CACHE_DIR}/${IMAGE%.xz}" "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2"
-  qemu-img resize "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2" 100G
+  cp "${CACHE_DIR}/${BASE_IMAGE}" "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2"
+  qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2" 100G
 
   virt-install --name ${CLUSTER_NAME}-worker-${i} \
     --ram ${WOR_MEM} --cpu host --vcpus ${WOR_CPU} \
