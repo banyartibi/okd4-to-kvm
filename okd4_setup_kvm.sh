@@ -148,7 +148,7 @@ case $key in
     shift
     ;;
     -X|--fresh-download)
-    FRESH_DOWN="$2"
+    FRESH_DOWN="yes"
     shift
     ;;
     -k|--keep-bootstrap)
@@ -343,16 +343,30 @@ check_if_we_can_continue() {
 }
 
 download() {
-    if [ "$1" == "check" ]
-    then
-        test -f "${CACHE_DIR}/$2" && echo "(reusing cached file) " || \
-            { curl -qs --head --fail "$3" &> /dev/null; echo; } || \
+    if [ "$1" == "check" ]; then
+        if [ -f "${CACHE_DIR}/$2" ]; then
+            if [ "$FRESH_DOWN" = "yes" ]; then
+                echo "(cached file found, but will be removed due to fresh download)"
+            else
+                echo "(reusing cached file) "
+            fi
+        else
+            if curl -qs --head --fail "$3" &> /dev/null; then
+                echo
+            else
                 err "$3 not reachable"
-    elif [ "$1" == "get" -a -n "$2" ]
-    then
-        test "$FRESH_DOWN" = "yes" -a -f "${CACHE_DIR}/$2" && rm -f "${CACHE_DIR}/$2" || true
-        test -f "${CACHE_DIR}/$2" && echo "(reusing cached file) " || \
-            { echo; wget "$3" -O "${CACHE_DIR}/$2"; }
+            fi
+        fi
+    elif [ "$1" == "get" ] && [ -n "$2" ]; then
+        if [ "$FRESH_DOWN" = "yes" ] && [ -f "${CACHE_DIR}/$2" ]; then
+            rm -f "${CACHE_DIR}/$2"
+        fi
+        if [ -f "${CACHE_DIR}/$2" ]; then
+            echo "(reusing cached file) "
+        else
+            echo
+            wget "$3" -O "${CACHE_DIR}/$2"
+        fi
     fi
 }
 
