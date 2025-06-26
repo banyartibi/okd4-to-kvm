@@ -297,7 +297,7 @@ exit
 fi
 
 # Default Values
-test -z "$OKD_VERSION" && OKD_VERSION="4.15.0-0.okd-2024-03-10-010116"
+test -z "$OKD_VERSION" && OKD_VERSION="4.14.0-0.okd-2024-01-26-175629"
 test -z "$FCOS_VERSION" && FCOS_VERSION="42.20250609.3.0"
 test -z "$FCOS_STREAM" && FCOS_STREAM="stable"
 test -z "$N_MAST" && N_MAST="2"
