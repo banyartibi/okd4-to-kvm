@@ -44,6 +44,13 @@ We have modified shell script to work with OKD.
 | -y, --yes | Set this for the script to be non-interactive and continue with out asking for confirmation<br>Default: [not set] |
 | --destroy | Set this if you want the script to destroy everything it has created<br>Use this option with the same options you used to install the cluster<br>Be carefull this deletes the VMs, DNS entries and the libvirt network (if created by the script)<br>Default: [not set] |
 
+### FCOS versions can be found here
+    https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/builds.json
+    https://builds.coreos.fedoraproject.org/prod/streams/testing/builds/builds.json
+    https://builds.coreos.fedoraproject.org/prod/streams/next/builds/builds.json
+
+### OKD versions can be found here
+    https://github.com/okd-project/okd/tags
 
 ### Examples
     # Deploy OKD 4.19.0-okd-scos.6 cluster
