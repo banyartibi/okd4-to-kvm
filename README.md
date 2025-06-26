@@ -16,7 +16,7 @@ We have modified shell script to work with OKD.
 | Option  |Description   |
 | :------------ | :------------ |
 | -O, --okd-version VERSION | You can set this to a specific version like 4.15.0-0.okd-2024-03-10-010116 etc. More info on https://github.com/OKD/okd/releases.<br>Default: 4.14.0-0.okd-2024-01-26-175629 |
-| -R, --fcos-version VERSION | You can set a specific FCOS version to use. For example "32.20200809.3.0" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.<br>Default: 32.20200809.3.0  |
+| -R, --fcos-version VERSION | You can set a specific FCOS version to use. For example "38.20231027.3.2" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.<br>Default: 38.20231027.3.2  |
 | -F, --fcos-stream STREAM | Steam of the image version you trying to download (stable/testing/next)<br>Default: stable |
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /opt/pull-secret |
 | -c, --cluster-name NAME | OKD 4 cluster name<br>Default: okd4 |
@@ -50,7 +50,7 @@ We have modified shell script to work with OKD.
     ./okd4_setup_kvm.sh --okd-version 4.19.0-okd-scos.6
     ./okd4_setup_kvm.sh -O 4.19.0-okd-scos.6
 
-    # Deploy OKD 4.20.0-okd-scos.ec.5 cluster with RHCOS 42.20250609.3.0
+    # Deploy OKD 4.20.0-okd-scos.ec.5 cluster with FCOS 42.20250609.3.0
     ./okd4_setup_kvm.sh --okd-version 4.20.0-okd-scos.ec.5 --fcos-version 42.20250609.3.0
     ./okd4_setup_kvm.sh -O 4.20.0-okd-scos.ec.5 -R 42.20250609.3.0
 
