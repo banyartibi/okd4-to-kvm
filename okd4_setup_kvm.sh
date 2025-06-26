@@ -330,9 +330,6 @@ test -z "$PULL_SEC_F" && PULL_SEC_F="/opt/pull-secret"; PULL_SEC=$(cat "$PULL_SE
 
 OKD_MIRROR="https://github.com/openshift/okd/releases/download"
 FCOS_MIRROR="https://builds.coreos.fedoraproject.org/prod/streams/$FCOS_STREAM/builds"
-#Stable release from https://fedoraproject.org/coreos/download?stream=stable&arch=x86_64#arches
-#Next release from https://fedoraproject.org/coreos/download?stream=next&arch=x86_64#arches
-#Testing release from https://fedoraproject.org/coreos/download?stream=testing&arch=x86_64#arches
 
 LB_IMG_URL="https://raw.repo.almalinux.org/almalinux/10.0/cloud/x86_64_v2/images/AlmaLinux-10-GenericCloud-latest.x86_64_v2.qcow2"
 
@@ -388,7 +385,7 @@ AVAILABLE_RAM=$(( AVAILABLE_RAM_INKB / 1024 ))
 REQUESTED_RAM=$(( N_MAST * MAS_MEM + N_WORK * WOR_MEM + BTS_MEM + LB_MEM ))
 REQUESTED_CPUS=$(( N_MAST * MAS_CPU + N_WORK * WOR_CPU + BTS_CPU + LB_CPU ))
 
-# Konvertálás GB-ba (egész számra kerekítve)
+# Convert to GB
 REQUESTED_GB=$(( REQUESTED_RAM / 1024 ))
 AVAILABLE_GB=$(( AVAILABLE_RAM / 1024 ))
 SAFE_RAM_LIMIT=$(( AVAILABLE_RAM * 3 / 2 ))  # 50% overcommitment
@@ -397,7 +394,7 @@ SAFE_RAM_LIMIT_GB=$(( SAFE_RAM_LIMIT / 1024 ))
 WARNING_LIMIT=$(( AVAILABLE_CPUS * 5 ))
 ERROR_LIMIT=$(( AVAILABLE_CPUS * 10 ))
 
-# CPU ellenőrzés (ugyanaz, mint előzőleg)
+# CPU Check with maximum 1000% overcommitment
 printf "====> Checking available CPUs : "
 if [ "$REQUESTED_CPUS" -ge "$ERROR_LIMIT" ]; then
     err "Requested CPUs: $REQUESTED_CPUS / $AVAILABLE_CPUS (it's more than 1000% overcommitment!)"
@@ -409,7 +406,7 @@ else
     echo "OK (overcommitment, but within safe 500% limit: $REQUESTED_CPUS / $AVAILABLE_CPUS)"
 fi
 
-# Új RAM ellenőrzés (GB-ban, 50% overcommitment)
+# 50% Memory Overcommitment allowed
 printf "====> Checking available RAM : "
 if [ "$REQUESTED_RAM" -le "$AVAILABLE_RAM" ]; then
     echo "OK (requested RAM: ${REQUESTED_GB}GB, available: ${AVAILABLE_GB}GB)"
@@ -500,8 +497,6 @@ echo "### OKD/FCOS VERSION/URL CHECK  ###"
 echo "##########################################"
 echo
 
-# OKD4 INSTALL AND CLIENT FILES
-
 echo -n "====> Looking up OKD4 client for release $OKD_VERSION: "
 CLIENT="openshift-client-linux-${OKD_VERSION}.tar.gz"; ok "$CLIENT"
 CLIENT_URL="${OKD_MIRROR}/${OKD_VERSION}/${CLIENT}"
@@ -514,31 +509,6 @@ INSTALLER_URL="${OKD_MIRROR}/${OKD_VERSION}/${INSTALLER}"
 echo "====> ${INSTALLER_URL}"
 echo -n "====> Checking if Installer URL is downloadable: ";  download check "$INSTALLER" "$INSTALLER_URL";
 
-## FCOS KERNEL, INITRAMFS AND IMAGE FILES
-#
-#echo -n "====> Looking up FCOS kernel for release ${FCOS_VERSION}: "
-#KERNEL="fedora-coreos-${FCOS_VERSION}-live-kernel.x86_64"; ok "$KERNEL"
-#KERNEL_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${KERNEL}"
-#echo "====> ${KERNEL_URL}"
-#echo -n "====> Checking if Kernel URL is downloadable: "; download check "$KERNEL" "$KERNEL_URL";
-#
-#echo -n "====> Looking up FCOS initramfs for release ${FCOS_VERSION}: "
-#INITRAMFS="fedora-coreos-${FCOS_VERSION}-live-initramfs.x86_64.img"; ok "$KERNEL"
-#INITRAMFS_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${INITRAMFS}"
-#echo "====> ${INITRAMFS_URL}"
-#echo -n "====> Checking if Initramfs URL is downloadable: "; download check "$INITRAMFS" "$INITRAMFS_URL";
-#
-#echo -n "====> Looking up FCOS image for release $FCOS_VER/$urldir: "
-#IMAGE="fedora-coreos-${FCOS_VERSION}-metal.x86_64.raw.xz"; ok "$IMAGE"
-#IMAGE_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE}"
-#echo "====> ${IMAGE_URL}"
-#echo -n "====> Checking if Image URL is downloadable: "; download check "$IMAGE" "$IMAGE_URL";
-#
-#echo -n "====> Looking up FCOS image signature for release $FCOS_VER/$urldir: "
-#IMAGE_SIG="fedora-coreos-${FCOS_VERSION}-metal.x86_64.raw.xz.sig"; ok "$IMAGE"
-#IMAGE_SIG_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE_SIG}"
-#echo "====> ${IMAGE_URL_SIG}"
-#echo -n "====> Checking if Image signature URL is downloadable: "; download check "$IMAGE_SIG" "$IMAGE_SIG__URL";
 if [[ "${FIND_SCOS}" == "yes" ]]; then
   echo "====> Discovering CoreOS image via openshift-install selected"
   echo "====> Can't list version now..."
@@ -583,7 +553,7 @@ do
     builtin type -P $x &> /dev/null || err "executable $x not found"
 done
 
-# Libvirt network driver: legalább az egyik elérési úton legyen meg
+# Libvirt network driver check for Debian based Linux disto too not only Redhat 
 DRIVER1="/usr/lib64/libvirt/connection-driver/libvirt_driver_network.so"
 DRIVER2="/usr/lib/x86_64-linux-gnu/libvirt/connection-driver/libvirt_driver_network.so"
 DEFAULT_NET="/usr/share/libvirt/networks/default.xml"
@@ -634,11 +604,6 @@ echo -n "====> Checking for any existing leftover /etc/hosts records: "
 existing=$(cat /etc/hosts | grep -v "^#" | grep -w -m1 "${CLUSTER_NAME}\.${BASE_DOM}") || true
 test -z "$existing" || err "Found existing record in /etc/hosts: $existing" "(You can comment these out)"
 ok
-
-# echo -n "====> Checking if first entry in resolv.conf is pointing locally: "
-# test "$(grep -m1 "^nameserver " /etc/resolv.conf | awk '{print $2}')" = "127.0.0.1"  || \
-#     err "First entry in /etc/resolv.conf not pointing to 127.0.0.1"
-# ok
 
 echo -n "====> Checking nameserver entries in resolv.conf: "
 ok "$(grep "^nameserver " /etc/resolv.conf | awk '{print $2}'| tr '\n' ' ')"
@@ -750,7 +715,6 @@ fi
 
 echo -n "====> Downloading CoreOS Image: "; download get "$IMAGE" "$IMAGE_URL"
 
-# Ha még nincs kicsomagolva, akkor unpackoljuk a formátum szerint
 if [ ! -f "${CACHE_DIR}/${IMAGE%%.*}" ]; then
   echo "====> Unpacking QCOW2 image..."
   case "$IMAGE" in
@@ -762,24 +726,6 @@ if [ ! -f "${CACHE_DIR}/${IMAGE%%.*}" ]; then
       echo "[WARN] Unknown compression format for ${IMAGE}, skipping unpack." ;;
   esac
 fi
-#echo -n "====> Downloading FCOS Image signature: "; download get "$IMAGE_SIG" "$IMAGE_SIG_URL";
-#echo -n "====> Downloading FCOS Kernel: "; download get "$KERNEL" "$KERNEL_URL";
-#echo -n "====> Downloading FCOS Initramfs: "; download get "$INITRAMFS" "$INITRAMFS_URL";
-
-#mkdir fcos-install
-#cp "${CACHE_DIR}/${KERNEL}" "fcos-install/vmlinuz"
-#cp "${CACHE_DIR}/${INITRAMFS}" "fcos-install/initramfs.img"
-#
-#cat <<EOF > fcos-install/.treeinfo
-#[general]
-#arch = x86_64
-#family = Fedora CoreOS
-#platforms = x86_64
-#version = ${OKD_VER}
-#[images-x86_64]
-#initrd = initramfs.img
-#kernel = vmlinuz
-#EOF
 
 mkdir install_dir
 cat <<EOF > install_dir/install-config.yaml
@@ -931,8 +877,6 @@ virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
     --copy-in tmpws.service:/etc/systemd/system/ \
     --run-command "systemctl daemon-reload" \
     --run-command "systemctl enable tmpws.service" || \
-    #--copy-in "${CACHE_DIR}/${IMAGE}":/opt/ \
-    #--copy-in "${CACHE_DIR}/${IMAGE_SIG}":/opt/ \
     err "Setting up Loadbalancer VM image failed"
 
 echo -n "====> Creating Loadbalancer VM: "
@@ -980,17 +924,6 @@ echo "====> Copying haproxy.cfg to Loadbalancer VM: "
 scp -i sshkey haproxy.cfg lb.${CLUSTER_NAME}.${BASE_DOM}:/etc/haproxy/haproxy.cfg || \
     err "Failed to copy haproxy.cfg"
 
-#We will handle this on a later point
-#echo "====> Setting SELinux to permissive mode permanently: "
-#ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "setenforce 0 && sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config" || \
-#    err "Failed to set SELinux to permissive"
-#
-#echo "====> Enabling haproxy service: "
-#ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "systemctl enable haproxy" || err "Failed to enable haproxy service"
-#
-#echo "====> Starting haproxy service: "
-#ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "systemctl start haproxy" || err "Failed to start haproxy service"
-
 echo 
 echo "##################"
 echo "#### DNS CHECK ###"
@@ -1032,50 +965,50 @@ echo
 
 echo  -n "====> Create bootstrap ignition ISO files /tmp "
 echo
-# Bootstrap ignition ISO
-if [ -f /tmp/bootstrap.iso ]; then
-    rm -f /tmp/bootstrap.iso
-fi
+# Bootstrap ignition ISO - Not used anymore
+#if [ -f /tmp/bootstrap.iso ]; then
+#    rm -f /tmp/bootstrap.iso
+#fi
 if [ -d /tmp/bootstrap_ign ]; then
     rm -rf /tmp/bootstrap_ign
 fi
 mkdir /tmp/bootstrap_ign
 cp ${SETUP_DIR}/install_dir/bootstrap.ign /tmp/bootstrap_ign/config.ign
-genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/bootstrap_ign/config.ign
-chmod 644 /tmp/bootstrap.iso
+#genisoimage -output /tmp/bootstrap.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/bootstrap_ign/config.ign
+#chmod 644 /tmp/bootstrap.iso
 
-# Master ignition ISO (ha minden masterhez külön .ign kell, akkor ciklussal)
-if [ -f /tmp/master.iso ]; then
-    rm -f /tmp/master.iso
-fi
+#if [ -f /tmp/master.iso ]; then
+#    rm -f /tmp/master.iso
+#fi
 if [ -d /tmp/master_ign ]; then
     rm -rf /tmp/master_ign
 fi
 mkdir /tmp/master_ign
 cp ${SETUP_DIR}/install_dir/master.ign /tmp/master_ign/config.ign
-genisoimage -output /tmp/master.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/master_ign/config.ign
-chmod 644 /tmp/master.iso
+#genisoimage -output /tmp/master.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/master_ign/config.ign
+#chmod 644 /tmp/master.iso
 
-# Worker ignition ISO (ha minden workerhez külön .ign kell, akkor ciklussal)
-if [ -f /tmp/worker.iso ]; then
-    rm -f /tmp/worker.iso
-fi
+#if [ -f /tmp/worker.iso ]; then
+#    rm -f /tmp/worker.iso
+#fi
 if [ -d /tmp/worker_ign ]; then
     rm -rf /tmp/worker_ign
 fi
 mkdir /tmp/worker_ign
 cp ${SETUP_DIR}/install_dir/worker.ign /tmp/worker_ign/config.ign
-genisoimage -output /tmp/worker.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/worker_ign/config.ign
-chmod 644 /tmp/worker.iso
+#genisoimage -output /tmp/worker.iso -volid config-2 -joliet -rock -input-charset utf-8 /tmp/worker_ign/config.ign
+#chmod 644 /tmp/worker.iso
 echo
 chmod -R 777 /tmp/*_ign/config.ign
-echo
-ls -la /tmp/*.iso
+#echo
+#ls -la /tmp/*.iso
 echo
 ls -la /tmp/*_ign/*
 echo
 
+# Set BASE_IMAGE variable is mandatory with new FCOS/SCOS find function
 BASE_IMAGE="${IMAGE%.*}"
+
 echo -n "====> Creating Bootstrap VM: "
 cp "${CACHE_DIR}/${BASE_IMAGE}" "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2"
 qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2" 100G
@@ -1088,13 +1021,6 @@ virt-install --name ${CLUSTER_NAME}-bootstrap \
   --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/tmp/bootstrap_ign/config.ign" \
   --noreboot --noautoconsole --import \
   > /dev/null || err "Creating bootstrap vm failed"; ok
-
-
-# If the webserver not working we can use fw_cfg or cloudinit CDROM:
-# --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/bootstrap.ign" \
-# --disk path=${SETUP_DIR}/bootstrap.ign,device=cdrom
-# Not working
-# --extra-args "coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/bootstrap.ign" \
 
 for i in $(seq 1 ${N_MAST})
 do
@@ -1436,11 +1362,11 @@ echo
 
 
 cat <<EOF > env
-# OKD4 Automated Install using https://github.com/kxr/OKD4_setup_upi_kvm
+# OKD4 Automated Install using https://github.com/banyartibi/okd4-to-kvm/
 # Script location: ${SDIR}
 # Script invoked with: ${SINV}
 # OKD: ${OKD_VERSION}
-# Fedora CoreOS version: ${FCOS_VERSION}
+# CoreOS version: ${COREOS_VERSION}
 #
 # Script start time: $(date -d @${START_TS})
 # Script end time:   $(date -d @${END_TS})
@@ -1465,4 +1391,3 @@ export KUBECONFIG="${SETUP_DIR}/install_dir/auth/kubeconfig"
 EOF
 cp ${SDIR}/add_node.sh ${SETUP_DIR}/add_node.sh
 cp ${SDIR}/expose_cluster.sh ${SETUP_DIR}/expose_cluster.sh
-

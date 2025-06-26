@@ -7,9 +7,9 @@ I am updated and reworked the script to work with modern versions of OKD and FCO
 You can define your OKD and FCOS versions and now also able to define streams for FCOS not only stable but testing and next too.
 Implemented OVNKubernetes as default NetworkType but as some versions between 4.12 and 4.14 can work with both OpenshiftSDN or OVNKubernetes so now there is an option to define NetworkType if you want to use older OKD or those what can run both type.
 
-From 4.16 releases are based on SCOS (CentOS Stream CoreOS) not FCOS. There were possible builds on SCOS from OKD 4.12 releases but the last one 4.15.0-0.okd-2024-03-10-010116 for FCOS while fist 4.16.0-okd-scos.1 is ONLY SCOS based. As latest 4.15 requires Fedora CoreOS 39.20240210.3 I set 39.20240210.3.0 as default FCOS for the default OKD 4.15.
+From 4.12 it's possible to run on SCOS (CentOS Stream CoreOS) instead of FCOS. The last one where we can use FCOS is 4.15.0-0.okd-2024-03-10-010116 while the first version with SCOS only is 4.16.0-okd-scos.1. The default variables will deploy OKD 4.15 with latest matching FCOS release.
 
-There is an option to use the OKD version's openshift-install to list matching CoreOS image (FCOS or SCOS) instead of define it. It's safe and much better to use this flag however the default is "no" at the moment. Tested it with latest stable OKD 4.19 what downloaded matching SCOS image what working like a charm.
+There is brand new option to use the openshift-install shipped by the OKD version selected to list matching CoreOS image (FCOS or SCOS) instead of declare it as a variable. It's the highly recommended and bulletproof option to use however the default is still "no" at the moment to ensure we are still able to run older versions of OKD too with this script. From version 4.16 please always use the -S, --find-fcos, --find-scos flag to deploy your cluster and do not use --fcos-version.
 
 ### Prerequistes:
 
@@ -25,7 +25,7 @@ There is an option to use the OKD version's openshift-install to list matching C
 | -O, --okd-version VERSION | You can set this to a specific version like 4.15.0-0.okd-2024-03-10-010116 etc. More info on https://github.com/OKD/okd/releases.<br>Default: 4.15.0-0.okd-2024-03-10-010116 |
 | -R, --fcos-version VERSION | You can set a specific FCOS version to use. For example "39.20240210.3.0" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.<br>Default: 39.20240210.3.0  |
 | -F, --fcos-stream STREAM | Steam of the image version you trying to download (stable/testing/next)<br>Default: stable |
-| -S, --find-fcos, --find-scos | Let the installation script find the matching CoreOS image for your OKD version<br>Default: no |
+| -S, --find-fcos, --find-scos | Let the installation script find the matching CoreOS image for your OKD version. Recommended to use with OKD 4.16 or higher versions<br>Default: no |
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /opt/pull-secret |
 | -c, --cluster-name NAME | OKD 4 cluster name<br>Default: okd4 |
 | -d, --cluster-domain DOMAIN | OKD 4 cluster domain<br>Default: local |
@@ -61,9 +61,9 @@ There is an option to use the OKD version's openshift-install to list matching C
     https://github.com/okd-project/okd/tags
 
 ### Examples
-    # Deploy OKD 4.19.0-okd-scos.6 cluster
-    ./okd4_setup_kvm.sh --okd-version 4.19.0-okd-scos.6
-    ./okd4_setup_kvm.sh -O 4.19.0-okd-scos.6
+    # Deploy OKD 4.19.0-okd-scos.6 cluster (-S is highly recommended to find the matching SCOS image for this OKD version)
+    ./okd4_setup_kvm.sh --okd-version 4.19.0-okd-scos.6 -S
+    ./okd4_setup_kvm.sh -O 4.19.0-okd-scos.6 -S
 
     # Deploy OKD 4.20.0-okd-scos.ec.5 cluster with FCOS 42.20250609.3.0
     ./okd4_setup_kvm.sh --okd-version 4.20.0-okd-scos.ec.5 --fcos-version 42.20250609.3.0
@@ -88,3 +88,12 @@ There is an option to use the OKD version's openshift-install to list matching C
     # Destory the already installed cluster
     ./okd4_setup_kvm.sh --cluster-name okd45 --cluster-domain lab.test.com --destroy
     ./okd4_setup_kvm.sh -c okd45 -d lab.test.com --destroy
+
+
+## TODOS
+
+### Update expose_cluster.sh
+    Expose cluster script contains outdated haproxy configuration. Do not use it!
+
+### add_node.sh
+    Finalize with new image based deployment not yet ready

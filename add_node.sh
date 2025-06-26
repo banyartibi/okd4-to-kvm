@@ -151,22 +151,26 @@ fi
 cd ${SETUP_DIR}
 
 echo -n "====> Creating ${NODE} VM: "
+cp "${CACHE_DIR}/${BASE_IMAGE}" "${VM_DIR}/${CLUSTER_NAME}-${NODE}.qcow2"
+qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-${NODE}.qcow2" 50G
   virt-install --name ${CLUSTER_NAME}-${NODE} \
-  --disk "${VM_DIR}/${CLUSTER_NAME}-${NODE}.qcow2,size=50" ${ADD_DISK} \
-  --ram ${MEM} --cpu host --vcpus ${CPU} \
-  --os-type linux --os-variant rhel7-unknown \
-  --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
-  --location rhcos-install/ \
-  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/worker.ign" > /dev/null || err "Creating ${NODE} vm failed "; ok
+    --ram ${MEM} --cpu host --vcpus ${CPU} \
+    --os-variant fedora-coreos-stable \
+    --disk path="${VM_DIR}/${CLUSTER_NAME}-${NODE}.qcow2",format=qcow2,bus=virtio \
+    --network network=${VIR_NET},model=virtio \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/tmp/worker_ign/config.ign" \
+    --noreboot --noautoconsole --import \
+    > /dev/null || err "Creating ${NODE} vm failed "; ok
+  
 
-echo "====> Waiting for RHCOS Installation to finish: "
+echo "====> Waiting for FCOS Installation to finish: "
 while rvms=$(virsh list --name | grep "${CLUSTER_NAME}-${NODE}" 2> /dev/null); do
     sleep 15
     echo "  --> VMs with pending installation: $(echo "$rvms" | tr '\n' ' ')"
 done
 
 echo -n "====> Starting ${NODE} VM: "
-virsh start ${CLUSTER_NAME}-${NODE} > /dev/null || err "virsh start ${CLUSTER_NAME}-worker-${i} failed"; ok
+virsh start ${CLUSTER_NAME}-${NODE} > /dev/null || err "virsh start ${CLUSTER_NAME}-${NODE} failed"; ok
 
 
 echo -n "====> Waiting for ${NODE} to obtain IP address: "
