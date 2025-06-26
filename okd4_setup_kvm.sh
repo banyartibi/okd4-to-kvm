@@ -31,6 +31,11 @@ case $key in
     shift
     shift
     ;;
+    -F|--fcos-stream)
+    FCOS_STREAM="$2"
+    shift
+    shift
+    ;;
     -m|--masters)
     N_MAST="$2"
     test "$N_MAST" -gt "0" &>/dev/null || err "Invalid masters: $N_MAST"
@@ -294,6 +299,7 @@ fi
 # Default Values
 test -z "$OKD_VERSION" && OKD_VERSION="4.15.0-0.okd-2024-03-10-010116"
 test -z "$FCOS_VERSION" && FCOS_VERSION="42.20250609.3.0"
+test -z "$FCOS_STREAM" && FCOS_STREAM="stable"
 test -z "$N_MAST" && N_MAST="2"
 test -z "$N_WORK" && N_WORK="3"
 test -z "$MAS_CPU" && MAS_CPU="8"
@@ -317,7 +323,11 @@ test -z "$CACHE_DIR" && CACHE_DIR="/opt/OKD4_downloads" && mkdir -p "$CACHE_DIR"
 test -z "$PULL_SEC_F" && PULL_SEC_F="/opt/pull-secret"; PULL_SEC=$(cat "$PULL_SEC_F")
 
 OKD_MIRROR="https://github.com/openshift/okd/releases/download"
-FCOS_MIRROR="https://builds.coreos.fedoraproject.org/prod/streams/stable/builds"
+FCOS_MIRROR="https://builds.coreos.fedoraproject.org/prod/streams/$FCOS_STREAM/builds"
+#Stable release from https://fedoraproject.org/coreos/download?stream=stable&arch=x86_64#arches
+#Next release from https://fedoraproject.org/coreos/download?stream=next&arch=x86_64#arches
+#Testing release from https://fedoraproject.org/coreos/download?stream=testing&arch=x86_64#arches
+
 LB_IMG_URL="https://raw.repo.almalinux.org/almalinux/10.0/cloud/x86_64_v2/images/AlmaLinux-10-GenericCloud-latest.x86_64_v2.qcow2"
 
 ok() {
@@ -527,6 +537,8 @@ echo
 echo "      OKD Version = $OKD_VERSION"
 echo
 echo "      Fedora CoreOS Version = $FCOS_VERSION"
+echo
+echo "      Fedora CoreOS Stream = $FCOS_STREAM"
 
 check_if_we_can_continue
 
@@ -713,11 +725,11 @@ cat <<EOF > install_dir/install-config.yaml
 apiVersion: v1
 baseDomain: ${BASE_DOM}
 compute:
-- hyperthreading: Disabled
+- hyperthreading: Enabled
   name: worker
   replicas: 0
 controlPlane:
-  hyperthreading: Disabled
+  hyperthreading: Enabled
   name: master
   replicas: ${N_MAST}
 metadata:
