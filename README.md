@@ -15,8 +15,8 @@ We have modified shell script to work with OKD.
 
 | Option  |Description   |
 | :------------ | :------------ |
-| -O, --okd-version VERSION | You can set this to a specific version like 4.15.0-0.okd-2024-03-10-010116 etc. More info on https://github.com/OKD/okd/releases.<br>Default: 4.14.0-0.okd-2024-01-26-175629 |
-| -R, --fcos-version VERSION | You can set a specific FCOS version to use. For example "38.20231027.3.2" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.<br>Default: 38.20231027.3.2  |
+| -O, --okd-version VERSION | You can set this to a specific version like 4.15.0-0.okd-2024-03-10-010116 etc. More info on https://github.com/OKD/okd/releases.<br>Default: 4.15.0-0.okd-2024-03-10-010116 |
+| -R, --fcos-version VERSION | You can set a specific FCOS version to use. For example "39.20240210.3.0" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.<br>Default: 39.20240210.3.0  |
 | -F, --fcos-stream STREAM | Steam of the image version you trying to download (stable/testing/next)<br>Default: stable |
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /opt/pull-secret |
 | -c, --cluster-name NAME | OKD 4 cluster name<br>Default: okd4 |
