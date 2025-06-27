@@ -735,7 +735,7 @@ if [ ! -f "${CACHE_DIR}/${IMAGE%%.*}" ]; then
     *.xz)
       unxz -k "${CACHE_DIR}/${IMAGE}" ;;
     *.gz)
-      gunzip -k "${CACHE_DIR}/${IMAGE}" ;;
+      gunzip -f -k "${CACHE_DIR}/${IMAGE}" ;;
     *)
       echo "[WARN] Unknown compression format for ${IMAGE}, skipping unpack." ;;
   esac
