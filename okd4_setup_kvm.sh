@@ -152,6 +152,18 @@ case $key in
     shift
     shift
     ;;
+    --lb-disk-size)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --lb-disk-size"
+    LB_DISKSIZE="$2"
+    shift
+    shift
+    ;;
+    --disk-size)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --disk-size"
+    DISK_SIZE="$2"
+    shift
+    shift
+    ;;
     -X|--fresh-download)
     FRESH_DOWN="yes"
     shift
@@ -316,6 +328,8 @@ test -z "$BTS_CPU" && BTS_CPU="8"
 test -z "$BTS_MEM" && BTS_MEM="16384"
 test -z "$LB_CPU" && LB_CPU="2"
 test -z "$LB_MEM" && LB_MEM="3072"
+test -z "$LB_DISKSIZE" && LB_DISKSIZE="10"
+test -z "$DISK_SIZE" && DISK_SIZE="50"
 test -z "$VIR_NET" -a -z "$VIR_NET_OCT" && VIR_NET="default"
 test -n "$VIR_NET" -a -n "$VIR_NET_OCT" && err "Specify either -n or -N" 
 test -z "$CLUSTER_NAME" && CLUSTER_NAME="okd4"
@@ -867,6 +881,7 @@ echo -n "====> Downloading AlmaLinux 10 cloud image: "; download get "$LB_IMG" "
 echo -n "====> Copying Image for Loadbalancer VM: "
 cp "${CACHE_DIR}/${LB_IMG}" "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" || \
     err "Copying '${VM_DIR}/${LB_IMG}' to '${VM_DIR}/${CLUSTER_NAME}-lb.qcow2' failed"; ok
+qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" $LB_DISKSIZE
 
 echo "====> Setting up Loadbalancer VM: "
 virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
@@ -915,7 +930,7 @@ while true; do
 done
 ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" true || err "SSH to lb.${CLUSTER_NAME}.${BASE_DOM} failed"; ok
 
-# HAPROXY TELEPÍTÉS ÉS KONFIGURÁCIÓ SSH-N KERESZTÜL
+# HAProxy Install and Confiure over SSH
 echo "====> Installing haproxy, policycoreutils-python-utils and bind-utils on Loadbalancer VM: "
 ssh -i sshkey lb.${CLUSTER_NAME}.${BASE_DOM} "dnf install -y haproxy policycoreutils-python-utils bind-utils" || \
     err "Failed to install haproxy and bind-utils"
@@ -1011,7 +1026,7 @@ BASE_IMAGE="${IMAGE%.*}"
 
 echo -n "====> Creating Bootstrap VM: "
 cp "${CACHE_DIR}/${BASE_IMAGE}" "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2"
-qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2" 100G
+qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2" $DISK_SIZE
 
 virt-install --name ${CLUSTER_NAME}-bootstrap \
   --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
@@ -1026,7 +1041,7 @@ for i in $(seq 1 ${N_MAST})
 do
   echo -n "====> Creating Master-${i} VM: "
   cp "${CACHE_DIR}/${BASE_IMAGE}" "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2"
-  qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2" 100G
+  qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2" $DISK_SIZE
 
   virt-install --name ${CLUSTER_NAME}-master-${i} \
     --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
@@ -1042,7 +1057,7 @@ for i in $(seq 1 ${N_WORK})
 do
   echo -n "====> Creating Worker-${i} VM: "
   cp "${CACHE_DIR}/${BASE_IMAGE}" "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2"
-  qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2" 100G
+  qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2" $DISK_SIZE
 
   virt-install --name ${CLUSTER_NAME}-worker-${i} \
     --ram ${WOR_MEM} --cpu host --vcpus ${WOR_CPU} \
