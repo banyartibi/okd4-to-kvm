@@ -881,7 +881,7 @@ echo -n "====> Downloading AlmaLinux 10 cloud image: "; download get "$LB_IMG" "
 echo -n "====> Copying Image for Loadbalancer VM: "
 cp "${CACHE_DIR}/${LB_IMG}" "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" || \
     err "Copying '${VM_DIR}/${LB_IMG}' to '${VM_DIR}/${CLUSTER_NAME}-lb.qcow2' failed"; ok
-qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" "${DISK_SIZE}G"
+qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" "${LB_DISKSIZE}G"
 
 echo "====> Setting up Loadbalancer VM: "
 virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
