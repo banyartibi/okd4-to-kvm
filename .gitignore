@@ -3,3 +3,10 @@ test.txt
 test-claim.yaml
 test-pod.yaml
 awx.yaml
+netbox-route.yaml
+.gitignore
+netbox-values.yaml
+awx.txt
+netbox.txt
+storage.txt
+.gitignore
