@@ -26,18 +26,18 @@ case $key in
     shift
     shift
     ;;
-    -R|--fcos-version)
+    -R|--fcos-version|--coreos-version)
     FCOS_VERSION="$2"
     shift
     shift
     ;;
-    -F|--fcos-stream)
+    -S|--fcos-stream)
     FCOS_STREAM="$2"
     shift
     shift
     ;;
-    -S|--find-fcos|--find-scos)
-    FIND_SCOS="yes"
+    -F|--find-fcos|--find-scos|--find-coreos)
+    FIND_COREOS="yes"
     shift
     shift
     ;;
@@ -265,7 +265,7 @@ cat << EOF | column -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 -s, --setup-dir DIR|The location where we the script keeps all the files related to the installation
 |Default: /opt/OKD4_setup_{CLUSTER_NAME}
 
--x, --cache-dir DIR|To avoid un-necessary downloads we download the OKD/FCOS files to a cache directory and reuse the files if they exist
+-x, --cache-dir DIR|To avoid un-necessary downloads we download the OKD/CoreOS files to a cache directory and reuse the files if they exist
 |This way you only download a file once and reuse them for future installs
 |You can force the script to download a fresh copy by using -X, --fresh-download
 |Default: /opt/OKD4_downloads
@@ -294,7 +294,7 @@ echo "# Deploy OKD 4.19.0-okd-scos.6 cluster"
 echo "${0} --okd-version 4.19.0-okd-scos.6"
 echo "${0} -O 4.19.0-okd-scos.6"
 echo 
-echo "# Deploy OKD 4.20.0-okd-scos.ec.5 cluster with FCOS 42.20250609.3.0"
+echo "# Deploy OKD 4.20.0-okd-scos.ec.5 cluster with Fedora CoreOS 42.20250609.3.0"
 echo "${0} --okd-version 4.20.0-okd-scos.ec.5 --fcos-version 42.20250609.3.0"
 echo "${0} -O 4.20.0-okd-scos.ec.5 -R 42.20250609.3.0"
 echo 
@@ -317,7 +317,7 @@ fi
 test -z "$OKD_VERSION" && OKD_VERSION="4.15.0-0.okd-2024-03-10-010116"
 test -z "$FCOS_VERSION" && FCOS_VERSION="39.20240210.3.0"
 test -z "$FCOS_STREAM" && FCOS_STREAM="stable"
-test -z "$FIND_SCOS" && FIND_SCOS="no"
+test -z "$FIND_COREOS" && FIND_COREOS="no"
 test -z "$N_MAST" && N_MAST="2"
 test -z "$N_WORK" && N_WORK="3"
 test -z "$MAS_CPU" && MAS_CPU="8"
@@ -507,7 +507,7 @@ fi
 
 echo 
 echo "##########################################"
-echo "### OKD/FCOS VERSION/URL CHECK  ###"
+echo "### OKD/CoreOS VERSION/URL CHECK  ###"
 echo "##########################################"
 echo
 
@@ -523,11 +523,11 @@ INSTALLER_URL="${OKD_MIRROR}/${OKD_VERSION}/${INSTALLER}"
 echo "====> ${INSTALLER_URL}"
 echo -n "====> Checking if Installer URL is downloadable: ";  download check "$INSTALLER" "$INSTALLER_URL";
 
-if [[ "${FIND_SCOS}" == "yes" ]]; then
+if [[ "${FIND_COREOS}" == "yes" ]]; then
   echo "====> Discovering CoreOS image via openshift-install selected"
   echo "====> Can't list version now..."
 else
-  echo "====> Looking up FCOS QEMU image for release ${FCOS_VERSION}"
+  echo "====> Looking up CoreOS QEMU image for release ${FCOS_VERSION}"
   IMAGE="fedora-coreos-${FCOS_VERSION}-qemu.x86_64.qcow2.xz"
   IMAGE_URL="${FCOS_MIRROR}/${FCOS_VERSION}/x86_64/${IMAGE}"
   echo "====> Image filename: ${IMAGE}"
@@ -544,7 +544,7 @@ echo
 echo
 echo "      OKD Version = $OKD_VERSION"
 echo
-if [[ "${FIND_SCOS}" == "yes" ]]; then
+if [[ "${FIND_COREOS}" == "yes" ]]; then
 echo "      CoreOS Version will be defined automatically later..."
 else
 echo "      CoreOS Version = $FCOS_VERSION"
@@ -702,8 +702,8 @@ echo -n "====> Downloading OCP Installer: "; download get "$INSTALLER" "$INSTALL
 tar -xf "${CACHE_DIR}/${CLIENT}" && rm -f README.md
 tar -xf "${CACHE_DIR}/${INSTALLER}" && rm -f rm -f README.md
 
-# If $FIND_SCOS = yes define $IMAGE and $IMAGE_URL here
-if [[ "${FIND_SCOS}" == "yes" ]]; then
+# If $FIND_COREOS = yes define $IMAGE and $IMAGE_URL here
+if [[ "${FIND_COREOS}" == "yes" ]]; then
   echo "====> Discovering CoreOS image via openshift-install"
   OC_INSTALL="${SETUP_DIR}/openshift-install"
   IMAGE_URL=$($OC_INSTALL coreos print-stream-json \
@@ -974,7 +974,7 @@ systemctl $DNS_CMD $DNS_SVC || err "systemctl $DNS_CMD $DNS_SVC failed"; ok
 
 echo 
 echo "############################################"
-echo "#### CREATE BOOTSTRAPING FCOS/OKD NODES ###"
+echo "#### CREATE BOOTSTRAPING CoreOS/OKD NODES ###"
 echo "############################################"
 echo 
 
@@ -1021,7 +1021,7 @@ echo
 ls -la /tmp/*_ign/*
 echo
 
-# Set BASE_IMAGE variable is mandatory with new FCOS/SCOS find function
+# Set BASE_IMAGE variable is mandatory with new CoreOS find function
 BASE_IMAGE="${IMAGE%.*}"
 
 echo -n "====> Creating Bootstrap VM: "
@@ -1069,7 +1069,7 @@ do
     > /dev/null || err "Creating worker-${i} vm failed "; ok
 done
 
-echo "====> Waiting for FCOS Installation to finish: "
+echo "====> Waiting for CoreOS Installation to finish: "
 while rvms=$(virsh list --name | grep "${CLUSTER_NAME}-master-\|${CLUSTER_NAME}-worker-\|${CLUSTER_NAME}-bootstrap" 2> /dev/null); do
     sleep 15
     echo "  --> VMs with pending installation: $(echo "$rvms" | tr '\n' ' ')"

@@ -24,8 +24,8 @@ There is brand new option to use the openshift-install shipped by the OKD versio
 | :------------ | :------------ |
 | -O, --okd-version VERSION | You can set this to a specific version like 4.15.0-0.okd-2024-03-10-010116 etc. More info on https://github.com/OKD/okd/releases.<br>Default: 4.15.0-0.okd-2024-03-10-010116 |
 | -R, --fcos-version VERSION | You can set a specific FCOS version to use. For example "39.20240210.3.0" etc. More info on https://getfedora.org/coreos/download?tab=metal_virtualized&stream=stable.<br>Default: 39.20240210.3.0  |
-| -F, --fcos-stream STREAM | Steam of the image version you trying to download (stable/testing/next)<br>Default: stable |
-| -S, --find-fcos, --find-scos | Let the installation script find the matching CoreOS image for your OKD version. Recommended to use with OKD 4.16 or higher versions<br>Default: no |
+| -S, --fcos-stream STREAM | Steam of the image version you trying to download (stable/testing/next)<br>Default: stable |
+| -F, --find-fcos, --find-scos, --find-coreos | Let the installation script find the matching CoreOS image for your OKD version. Recommended to use with OKD 4.16 or higher versions<br>Default: no |
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /opt/pull-secret |
 | -c, --cluster-name NAME | OKD 4 cluster name<br>Default: okd4 |
 | -d, --cluster-domain DOMAIN | OKD 4 cluster domain<br>Default: local |
@@ -63,9 +63,9 @@ There is brand new option to use the openshift-install shipped by the OKD versio
     https://github.com/okd-project/okd/tags
 
 ### Examples
-    # Deploy OKD 4.19.0-okd-scos.6 cluster (-S is highly recommended to find the matching SCOS image for this OKD version)
-    ./okd4_setup_kvm.sh --okd-version 4.19.0-okd-scos.6 -S
-    ./okd4_setup_kvm.sh -O 4.19.0-okd-scos.6 -S
+    # Deploy OKD 4.19.0-okd-scos.6 cluster (-F is highly recommended to find the matching SCOS image for this OKD version)
+    ./okd4_setup_kvm.sh --okd-version 4.19.0-okd-scos.6 -F
+    ./okd4_setup_kvm.sh -O 4.19.0-okd-scos.6 -F
 
     # Deploy OKD 4.20.0-okd-scos.ec.5 cluster with FCOS 42.20250609.3.0
     ./okd4_setup_kvm.sh --okd-version 4.20.0-okd-scos.ec.5 --fcos-version 42.20250609.3.0
