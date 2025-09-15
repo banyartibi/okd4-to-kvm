@@ -195,7 +195,6 @@ case $key in
 esac
 done
 
-
 if [ "$SHOW_HELP" == "yes" ]; then
 echo
 echo "Usage: ${0} [OPTIONS]"
@@ -344,7 +343,6 @@ test -z "$PULL_SEC_F" && PULL_SEC_F="/opt/pull-secret"; PULL_SEC=$(cat "$PULL_SE
 
 OKD_MIRROR="https://github.com/openshift/okd/releases/download"
 FCOS_MIRROR="https://builds.coreos.fedoraproject.org/prod/streams/$FCOS_STREAM/builds"
-
 LB_IMG_URL="https://raw.repo.almalinux.org/almalinux/10.0/cloud/x86_64_v2/images/AlmaLinux-10-GenericCloud-latest.x86_64_v2.qcow2"
 
 ok() {
@@ -503,8 +501,6 @@ if [ "$CLEANUP" == "yes" ]; then
     exit
 fi
 
-
-
 echo 
 echo "##########################################"
 echo "### OKD/CoreOS VERSION/URL CHECK  ###"
@@ -558,8 +554,7 @@ echo
 echo "###################################" 
 echo "### PRELIMINARY / SANITY CHECKS ###"
 echo "###################################"
-echo 
-
+echo
 
 echo -n "====> Checking if we have all the dependencies: "
 for x in virsh virt-install virt-customize systemctl dig wget
@@ -673,21 +668,28 @@ elif [ -n "$VIR_NET_OCT" ]; then
             ok
         fi
     fi
-    echo -n "====> Creating libvirt network okd-${VIR_NET_OCT}"
+    echo -n "====> Creating libvirt network okd-${VIR_NET_OCT} with DNS configuration: "
     /usr/bin/cp /usr/share/libvirt/networks/default.xml /tmp/new-net.xml > /dev/null || err "Network creation failed"
     sed -i "s/default/okd-${VIR_NET_OCT}/" /tmp/new-net.xml
     sed -i "s/virbr0/okd-${VIR_NET_OCT}/" /tmp/new-net.xml
     sed -i "s/122/${VIR_NET_OCT}/g" /tmp/new-net.xml
+    
+    # Add DNS configuration to use host dnsmasq
+    DNS_IP="192.168.${VIR_NET_OCT}.1"
+    sed -i "/<ip address=.* netmask=.*>/a\\
+    <dns>\\
+      <server ip='${DNS_IP}'/>\\
+    </dns>" /tmp/new-net.xml
+    
     virsh net-define /tmp/new-net.xml > /dev/null || err "virsh net-define failed"
     virsh net-autostart okd-${VIR_NET_OCT} > /dev/null || err "virsh net-autostart failed"
     virsh net-start okd-${VIR_NET_OCT} > /dev/null || err "virsh net-start failed"
     systemctl restart libvirtd > /dev/null || err "systemctl restart libvirtd failed"
-    echo "okd-${VIR_NET_OCT} created"
+    echo "okd-${VIR_NET_OCT} created with DNS server ${DNS_IP}"
     VIR_NET="okd-${VIR_NET_OCT}"
 else
     err "Sorry, unhandled situation. Exiting"
 fi
-
 
 echo -n "====> Creating and using directory $SETUP_DIR: "
 mkdir -p $SETUP_DIR && cd $SETUP_DIR || err "using $SETUP_DIR failed"
@@ -868,8 +870,6 @@ for i in $(seq 1 ${N_MAST}); do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
 done
 
-
-
 echo 
 echo "#################################"
 echo "### CREATING LOAD BALANCER VM ###"
@@ -970,7 +970,6 @@ echo -n "====> Cleaning up: "
 sed -i "/1.2.3.4 xxxtestxxx.${BASE_DOM}/d" /etc/hosts || err "sed failed"
 rm -f ${DNS_DIR}/xxxtestxxx.conf || err "rm failed"
 systemctl $DNS_CMD $DNS_SVC || err "systemctl $DNS_CMD $DNS_SVC failed"; ok
-
 
 echo 
 echo "############################################"
@@ -1108,7 +1107,6 @@ virsh net-update ${VIR_NET} add-last ip-dhcp-host --xml "<host mac='$MAC' ip='$B
 echo -n "  ==> Adding /etc/hosts entry: "
 echo "$BSIP bootstrap.${CLUSTER_NAME}.${BASE_DOM}" >> /etc/hosts || err "failed"; ok
 
-
 for i in $(seq 1 ${N_MAST}); do
     echo -n "====> Waiting for Master-$i to obtain IP address: "
         while true
@@ -1191,8 +1189,6 @@ while true; do
     break
 done
 ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" true || err "SSH to lb.${CLUSTER_NAME}.${BASE_DOM} failed"; ok
-
-
 
 echo 
 echo "###############################"
@@ -1368,9 +1364,6 @@ echo "          time taken = $TIME_TAKEN minutes"
 echo 
 
 ./openshift-install --dir=install_dir wait-for install-complete
-
-
-
 
 # Create an env file to record the vars
 # Can be used for future operations
