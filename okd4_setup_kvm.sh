@@ -628,7 +628,7 @@ ok
 echo -n "====> Checking if DNS service (dnsmasq or NetworkManager) is active: "
 if [ "$DNS_DIR" -ef "/etc/NetworkManager/dnsmasq.d" ]
 then
-    DNS_SVC="NetworkManager"; DNS_CMD="reload";
+    DNS_SVC="NetworkManager"; DNS_CMD="restart";
 elif [ "$DNS_DIR" -ef "/etc/dnsmasq.d" ]
 then
     DNS_SVC="dnsmasq"; DNS_CMD="restart";
@@ -1151,7 +1151,7 @@ done
 echo -n '====> Adding wild-card (*.apps) dns record in dnsmasq: '
 echo "address=/apps.${CLUSTER_NAME}.${BASE_DOM}/${LBIP}" >> ${DNS_DIR}/${CLUSTER_NAME}.conf || err "failed"; ok
 
-echo -n "====> Resstarting libvirt and dnsmasq: "
+echo -n "====> Restarting libvirt and dnsmasq: "
 systemctl restart libvirtd || err "systemctl restart libvirtd failed"
 systemctl $DNS_CMD $DNS_SVC || err "systemctl $DNS_CMD $DNS_SVC"; ok
 
