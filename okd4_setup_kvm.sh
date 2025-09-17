@@ -896,7 +896,7 @@ virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
 
 echo -n "====> Creating Loadbalancer VM: "
 virt-install --import --name ${CLUSTER_NAME}-lb --disk "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
-    --memory ${LB_MEM} --cpu host-passthrought --vcpus ${LB_CPU} --os-variant almalinux10 \
+    --memory ${LB_MEM} --cpu host-model --vcpus ${LB_CPU} --os-variant almalinux10 \
     --network network=${VIR_NET},model=virtio --noreboot --noautoconsole > /dev/null || \
     err "Creating Loadbalancer VM failed"; ok
 
@@ -1028,7 +1028,7 @@ cp "${CACHE_DIR}/${BASE_IMAGE}" "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2"
 qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2" "${DISK_SIZE}G"
 
 virt-install --name ${CLUSTER_NAME}-bootstrap \
-  --ram ${BTS_MEM} --cpu host-passthrought --vcpus ${BTS_CPU} \
+  --ram ${BTS_MEM} --cpu host-model --vcpus ${BTS_CPU} \
   --os-variant fedora-coreos-stable \
   --disk path="${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2",format=qcow2,bus=virtio \
   --network network=${VIR_NET},model=virtio \
@@ -1043,7 +1043,7 @@ do
   qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2" "${DISK_SIZE}G"
 
   virt-install --name ${CLUSTER_NAME}-master-${i} \
-    --ram ${MAS_MEM} --cpu host-passthrought --vcpus ${MAS_CPU} \
+    --ram ${MAS_MEM} --cpu host-model --vcpus ${MAS_CPU} \
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2",format=qcow2,bus=virtio \
     --network network=${VIR_NET},model=virtio \
@@ -1059,7 +1059,7 @@ do
   qemu-img resize -f qcow2 "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2" "${DISK_SIZE}G"
 
   virt-install --name ${CLUSTER_NAME}-worker-${i} \
-    --ram ${WOR_MEM} --cpu host-passthrought --vcpus ${WOR_CPU} \
+    --ram ${WOR_MEM} --cpu host-model --vcpus ${WOR_CPU} \
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2",format=qcow2,bus=virtio \
     --network network=${VIR_NET},model=virtio \
