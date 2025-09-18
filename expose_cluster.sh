@@ -5,7 +5,7 @@
 # This will expose the OpenShift cluster load balancer via firewall port
 # forward rules. Before you can run this script, you must have already
 # successfully installed your OpenShift cluster via the
-# ocp4-setup-upi-kvm.sh script.
+# okd4_setup_kvm.sh script.
 ###############################################################################
 
 set -e
@@ -45,12 +45,12 @@ done
 
 if [ "$SHOW_HELP" == "yes" ]; then
 echo
-echo "Usage: ${0} --method [ firewalld | haproxy ]"
+echo "Usage: ${0} --method [ firewalld | haproxy | ufw ]"
 echo
 cat << EOF | column -L -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 
 -m, --method NAME|Select the method with which you want to expose this cluster.
-|Valid options are "firewalld" and "haproxy"
+|Valid options are "firewalld", "haproxy" and "ufw"
 |<REQUIRED>
 
 EOF
@@ -74,9 +74,8 @@ test -n "$EXPOSE_METHOD" || \
         "Run:  '${0} --help' for details"
 
 # Check if we have the required variables from env file
-test -n "$CLUSTER_NAME" -a -n "$BASE_DOM" -a -n "$SETUP_DIR" -a -n "$VIR_NET" || \
-    err "Unable to find existing cluster info"
-
+test -n "$CLUSTER_NAME" -a -n "$BASE_DOM" -a -n "$SETUP_DIR" -a -n "$VIR_NET" -a -n "$LBIP" || \
+    err "Unable to find existing cluster info (need CLUSTER_NAME, BASE_DOM, SETUP_DIR, VIR_NET, LBIP)"
 
 # --method firewalld
 if [ "$EXPOSE_METHOD" == "firewalld" ]; then
@@ -151,7 +150,6 @@ if [ "$EXPOSE_METHOD" == "firewalld" ]; then
 
     echo -n "====> Adding passthrough forwarding -I FORWARD -o ${VIR_INT}: "
     firewall-cmd --direct --passthrough ipv4 -I FORWARD -o ${VIR_INT} -j ACCEPT || echo "Failed"
-
 
 # --method haproxy
 elif [ "$EXPOSE_METHOD" == "haproxy" ]; then
@@ -246,13 +244,137 @@ EOF
     echo
     echo
 
+# --method ufw
+elif [ "$EXPOSE_METHOD" == "ufw" ]; then
 
-## TODO --method iptables
-#elif [ "$EXPOSE_METHOD" == "iptables" ]; then
+    # Checking if ip_forward is enabled (runtime)
+    echo -n "====> Checking if ip_forward is enabled: "
+    IP_FWD=$(cat /proc/sys/net/ipv4/ip_forward)
+    test "$IP_FWD" = "1" || \
+        err "IP forwarding not enabled." "/proc/sys/net/ipv4/ip_forward has $IP_FWD"; ok
+
+    # Check ufw availability
+    echo -n "====> Checking ufw binary: "
+    test "$(which ufw)" || err "ufw not found in PATH"; ok
+
+    echo -n "====> Checking if ufw is active: "
+    ufw status | grep -qi "Status: active" || err "ufw is not active. Run: 'ufw enable'"; ok
+
+    # Determine the interface for libvirt network
+    echo -n "====> Determining the libvirt interface: "
+    VIR_INT=$(virsh net-info ${VIR_NET} | grep Bridge | awk '{print $2}' 2> /dev/null) && \
+    test -n "$VIR_INT" || \
+        err "Unable to find interface for libvirt network"; ok
+
+    UFW_BEFORE=/etc/ufw/before.rules
+    UFW_DEFAULT=/etc/default/ufw
+    UFW_SYSCTL=/etc/ufw/sysctl.conf
+
+    echo -n "====> Checking $UFW_BEFORE presence: "
+    test -f "$UFW_BEFORE" || err "$UFW_BEFORE not found"; ok
+
+    echo -n "====> Checking existing okd4 NAT block in $UFW_BEFORE: "
+    if grep -q "^# BEGIN okd4 expose nat" "$UFW_BEFORE"; then
+        echo "Found"
+        echo
+        echo "# Existing okd4 NAT block found in $UFW_BEFORE"
+        echo "# To remove it manually, run:"
+        echo "  sed -i '/# BEGIN okd4 expose nat/,/# END okd4 expose nat/d' $UFW_BEFORE"
+        echo "  systemctl restart ufw"
+        err ""
+    else
+        ok
+    fi
+
+    echo
+    echo "#################"
+    echo "### UFW RULES ###"
+    echo "#################"
+    echo
+    echo "# This script will:"
+    echo "#  - Insert a NAT DNAT+MASQUERADE block into $UFW_BEFORE to forward 80/443/6443 to ${LBIP}"
+    echo "#  - Set DEFAULT_FORWARD_POLICY=\"ACCEPT\" in $UFW_DEFAULT"
+    echo "#  - Ensure IPv4 forwarding persistence in $UFW_SYSCTL (net/ipv4/ip_forward=1)"
+    echo "#  - Allow 80,443,6443 in UFW and add 'ufw route allow' to ${LBIP}"
+    echo "#  - Restart UFW to apply"
+    echo
+    check_if_we_can_continue
+
+    TS=$(date +%s)
+
+    echo -n "====> Backing up $UFW_BEFORE: "
+    cp -a "$UFW_BEFORE" "${UFW_BEFORE}.bak.${TS}" && ok || err "Backup failed"
+
+    echo -n "====> Backing up $UFW_DEFAULT: "
+    cp -a "$UFW_DEFAULT" "${UFW_DEFAULT}.bak.${TS}" && ok || err "Backup failed"
+
+    echo -n "====> Backing up $UFW_SYSCTL (if exists): "
+    if [ -f "$UFW_SYSCTL" ]; then
+        cp -a "$UFW_SYSCTL" "${UFW_SYSCTL}.bak.${TS}" && ok || err "Backup failed"
+    else
+        echo "not found, will create"
+    fi
+
+    echo -n "====> Writing okd4 NAT block into $UFW_BEFORE: "
+    TMP_NAT=$(mktemp)
+    cat > "$TMP_NAT" <<EOF
+# BEGIN okd4 expose nat
+*nat
+:PREROUTING ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+-A PREROUTING -p tcp --dport 80   -j DNAT --to-destination ${LBIP}:80
+-A PREROUTING -p tcp --dport 443  -j DNAT --to-destination ${LBIP}:443
+-A PREROUTING -p tcp --dport 6443 -j DNAT --to-destination ${LBIP}:6443
+-A POSTROUTING -o ${VIR_INT} -p tcp -d ${LBIP} --dport 80   -j MASQUERADE
+-A POSTROUTING -o ${VIR_INT} -p tcp -d ${LBIP} --dport 443  -j MASQUERADE
+-A POSTROUTING -o ${VIR_INT} -p tcp -d ${LBIP} --dport 6443 -j MASQUERADE
+COMMIT
+# END okd4 expose nat
+EOF
+    cat "$TMP_NAT" "$UFW_BEFORE" > "${UFW_BEFORE}.new" && mv "${UFW_BEFORE}.new" "$UFW_BEFORE" && rm -f "$TMP_NAT" && ok || err "Failed to write NAT block"
+
+    echo -n "====> Setting DEFAULT_FORWARD_POLICY=\"ACCEPT\": "
+    sed -i 's/^DEFAULT_FORWARD_POLICY=.*/DEFAULT_FORWARD_POLICY="ACCEPT"/' "$UFW_DEFAULT" && ok || err "Failed to update $UFW_DEFAULT"
+
+    echo -n "====> Ensuring net/ipv4/ip_forward=1 in $UFW_SYSCTL: "
+    touch "$UFW_SYSCTL"
+    if grep -q '^[[:space:]]*net/ipv4/ip_forward' "$UFW_SYSCTL"; then
+        sed -i 's|^[[:space:]]*net/ipv4/ip_forward.*|net/ipv4/ip_forward=1|' "$UFW_SYSCTL"
+    else
+        echo "net/ipv4/ip_forward=1" >> "$UFW_SYSCTL"
+    fi
+    ok
+
+    echo -n "====> Allowing UFW ports 80,443,6443: "
+    (ufw allow 80/tcp >/dev/null 2>&1 || true) \
+    && (ufw allow 443/tcp >/dev/null 2>&1 || true) \
+    && (ufw allow 6443/tcp >/dev/null 2>&1 || true)
+    ok
+
+    echo -n "====> Adding UFW route allow rules to ${LBIP}: "
+    (ufw route allow proto tcp to ${LBIP} port 80   >/dev/null 2>&1 || true)
+    (ufw route allow proto tcp to ${LBIP} port 443  >/dev/null 2>&1 || true)
+    (ufw route allow proto tcp to ${LBIP} port 6443 >/dev/null 2>&1 || true)
+    ok
+
+    echo -n "====> Applying sysctl (runtime) ip_forward=1: "
+    sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1 && ok || echo "Failed (continuing)"
+
+    echo -n "====> Restarting ufw to apply changes: "
+    systemctl restart ufw || ufw reload || err "Failed to reload ufw"; ok
+
+    echo
+    echo "# Done. Backups:"
+    echo "#   ${UFW_BEFORE}.bak.${TS}"
+    echo "#   ${UFW_DEFAULT}.bak.${TS}"
+    if [ -f "${UFW_SYSCTL}.bak.${TS}" ]; then
+      echo "#   ${UFW_SYSCTL}.bak.${TS}"
+    fi
+    echo
+
 else
     err "Unkown method"
 fi
-
 
 echo
 echo
