@@ -896,7 +896,7 @@ virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
 
 echo -n "====> Creating Loadbalancer VM: "
 virt-install --import --name ${CLUSTER_NAME}-lb --disk "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
-    --memory ${LB_MEM} --cpu host-model --vcpus ${LB_CPU} --os-variant rhel10 \
+    --memory ${LB_MEM} --cpu host-model --vcpus ${LB_CPU} --os-variant rhel10-unknown \
     --network network=${VIR_NET},model=virtio --noreboot --noautoconsole > /dev/null || \
     err "Creating Loadbalancer VM failed"; ok
 
