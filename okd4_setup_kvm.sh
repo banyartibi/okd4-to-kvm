@@ -673,13 +673,8 @@ elif [ -n "$VIR_NET_OCT" ]; then
     sed -i "s/default/okd-${VIR_NET_OCT}/" /tmp/new-net.xml
     sed -i "s/virbr0/okd-${VIR_NET_OCT}/" /tmp/new-net.xml
     sed -i "s/122/${VIR_NET_OCT}/g" /tmp/new-net.xml
-    
-    # Add DNS configuration to use host dnsmasq
-    DNS_IP="192.168.${VIR_NET_OCT}.1"
-    sed -i "/<ip address=.* netmask=.*>/a\\
-    <dns>\\
-      <server ip='${DNS_IP}'/>\\
-    </dns>" /tmp/new-net.xml
+    sed -i "s/<network>/<network xmlns:dnsmasq='http:\/\/libvirt.org\/schemas\/network\/dnsmasq\/1.0'>/" /tmp/new-net.xml
+    sed -i "/<\/network>/i <dnsmasq:options><dnsmasq:option value='conf-dir=\/etc\/NetworkManager\/dnsmasq.d,\*.conf'\/><\/dnsmasq:options>" /tmp/new-net.xml
     
     virsh net-define /tmp/new-net.xml > /dev/null || err "virsh net-define failed"
     virsh net-autostart okd-${VIR_NET_OCT} > /dev/null || err "virsh net-autostart failed"
@@ -959,15 +954,39 @@ rev_dig=$(ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "dig +short -x '1.2.3.4
 test "$?" -eq "0" -a "$rev_dig" = "xxxtestxxx.${BASE_DOM}." || err "Testing DNS reverse record failed ($rev_dig)"; ok
 
 echo -n "====> Adding test SRV record in dnsmasq: "
-#echo "srv-host=xxxtestxxx.${BASE_DOM},yyyayyy.${BASE_DOM},2380,0,10" > ${DNS_DIR}/xxxtestxxx.conf
-echo "srv-host=_testservice._tcp.xxxtestxxx.${BASE_DOM},yyyayyy.${BASE_DOM},2380,0,10" > ${DNS_DIR}/xxxtestxxx.conf
+echo "srv-host=_testservice._tcp.xxxtestxxx.${BASE_DOM},yyyayyy.${BASE_DOM},2380,0,10" > "${DNS_DIR}/xxxtestxxx.conf"
+ok
 
-systemctl $DNS_CMD $DNS_SVC || err "systemctl $DNS_CMD $DNS_SVC failed"; ok
+echo -n "Reloading DNS configuration and clearing cache... "
+
+nmcli general reload >/dev/null 2>&1 || systemctl reload NetworkManager >/dev/null 2>&1
+
+pkill -HUP dnsmasq
+
+sleep 2 
+ok
 
 echo -n "====> Testing SRV record from LB: "
-#srv_dig=$(ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "dig srv +short 'xxxtestxxx.${BASE_DOM}' 2> /dev/null" | grep -q -s "yyyayyy.${BASE_DOM}") || \
-srv_dig=$(ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "dig srv +short '_testservice._tcp.xxxtestxxx.${BASE_DOM}' 2> /dev/null" | grep -q -s "yyyayyy.${BASE_DOM}") || \
-    err "ERROR: Testing SRV record failed"; ok
+ATTEMPTS=0
+MAX_ATTEMPTS=15
+SUCCESS=false
+while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+    echo -n "."
+    if ssh -i "${SETUP_DIR}/sshkey" "root@lb.${CLUSTER_NAME}.${BASE_DOM}" "dig srv +short '_testservice._tcp.xxxtestxxx.${BASE_DOM}'" | grep -q -s "yyyayyy.${BASE_DOM}"; then
+        SUCCESS=true
+        break
+    fi
+    ATTEMPTS=$((ATTEMPTS + 1))
+    sleep 2
+done
+
+echo ""
+
+if [ "$SUCCESS" != "true" ]; then
+    ssh -i "${SETUP_DIR}/sshkey" "root@lb.${CLUSTER_NAME}.${BASE_DOM}" "dig srv '_testservice._tcp.xxxtestxxx.${BASE_DOM}'"
+    err "ERROR: Testing SRV record failed after $MAX_ATTEMPTS attempts"
+fi
+ok
 
 echo -n "====> Cleaning up: "
 sed -i "/1.2.3.4 xxxtestxxx.${BASE_DOM}/d" /etc/hosts || err "sed failed"
@@ -1035,7 +1054,7 @@ virt-install --name ${CLUSTER_NAME}-bootstrap \
   --os-variant fedora-coreos-stable \
   --disk path="${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2",format=qcow2,bus=virtio \
   --network network=${VIR_NET},model=virtio \
-  --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/tmp/bootstrap_ign/config.ign" \
+  --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/install_dir/bootstrap.ign" \
   --noreboot --noautoconsole --import \
   > /dev/null || err "Creating bootstrap vm failed"; ok
 
@@ -1050,7 +1069,7 @@ do
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2",format=qcow2,bus=virtio \
     --network network=${VIR_NET},model=virtio \
-    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/tmp/master_ign/config.ign" \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/install_dir/master.ign" \
     --noreboot --noautoconsole --import \
     > /dev/null || err "Creating master-${i} vm failed "; ok
 done
@@ -1066,7 +1085,7 @@ do
     --os-variant fedora-coreos-stable \
     --disk path="${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2",format=qcow2,bus=virtio \
     --network network=${VIR_NET},model=virtio \
-    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=/tmp/worker_ign/config.ign" \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${SETUP_DIR}/install_dir/worker.ign" \
     --noreboot --noautoconsole --import \
     > /dev/null || err "Creating worker-${i} vm failed "; ok
 done
@@ -1079,6 +1098,10 @@ done
 
 echo -n "====> Marking ${CLUSTER_NAME}.${BASE_DOM} as local domain in dnsmasq: "
 echo "local=/${CLUSTER_NAME}.${BASE_DOM}/" > ${DNS_DIR}/${CLUSTER_NAME}.conf || err "failed"; ok
+
+echo -n "====> Finalizing SELinux context for all VM files: "
+chcon -R -t svirt_image_t "${VM_DIR}" || err "chcon failed for ${VM_DIR}"; ok
+chmod 777 -R ${VM_DIR}/setup_dir/install_dir/*.ign
 
 echo -n "====> Starting Bootstrap VM: "
 virsh start ${CLUSTER_NAME}-bootstrap > /dev/null || err "virsh start ${CLUSTER_NAME}-bootstrap failed"; ok
