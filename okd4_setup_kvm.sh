@@ -674,7 +674,7 @@ elif [ -n "$VIR_NET_OCT" ]; then
     sed -i "s/virbr0/okd-${VIR_NET_OCT}/" /tmp/new-net.xml
     sed -i "s/122/${VIR_NET_OCT}/g" /tmp/new-net.xml
     sed -i "s/<network>/<network xmlns:dnsmasq='http:\/\/libvirt.org\/schemas\/network\/dnsmasq\/1.0'>/" /tmp/new-net.xml
-    sed -i "/<\/network>/i <dnsmasq:options><dnsmasq:option value='conf-dir=\/etc\/NetworkManager\/dnsmasq.d,\*.conf'\/><\/dnsmasq:options>" /tmp/new-net.xml
+    sed -i "/<\/network>/i <dnsmasq:options><dnsmasq:option value='conf-dir=$DNS_DIR,*.conf'\/><\/dnsmasq:options>" /tmp/new-net.xml
     
     virsh net-define /tmp/new-net.xml > /dev/null || err "virsh net-define failed"
     virsh net-autostart okd-${VIR_NET_OCT} > /dev/null || err "virsh net-autostart failed"
